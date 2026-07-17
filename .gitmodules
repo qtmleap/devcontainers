@@ -1,0 +1,18 @@
+[submodule "examples/hono-node/biome-plugins"]
+	path = examples/hono-node/biome-plugins
+	url = https://github.com/qtmleap/biome-plugins.git
+[submodule "examples/hono-workers/biome-plugins"]
+	path = examples/hono-workers/biome-plugins
+	url = https://github.com/qtmleap/biome-plugins.git
+[submodule "examples/hono-vite-react-node/biome-plugins"]
+	path = examples/hono-vite-react-node/biome-plugins
+	url = https://github.com/qtmleap/biome-plugins.git
+[submodule "examples/hono-vite-react-workers/biome-plugins"]
+	path = examples/hono-vite-react-workers/biome-plugins
+	url = https://github.com/qtmleap/biome-plugins.git
+[submodule "examples/hono-vite-react-workers-prisma/biome-plugins"]
+	path = examples/hono-vite-react-workers-prisma/biome-plugins
+	url = https://github.com/qtmleap/biome-plugins.git
+[submodule "examples/vinext/biome-plugins"]
+	path = examples/vinext/biome-plugins
+	url = https://github.com/qtmleap/biome-plugins.git
