@@ -1,0 +1,250 @@
+name: Integration
+on:
+  push:
+    branches-ignore:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Meta-CI for the devcontainer template repo. Every push runs each example's
+# integration checks (lint / typecheck / build / test) against the current
+# template state. If any example regresses, a bad commit doesn't land.
+#
+# Structure per stack:
+#   - Node/Bun (hono-*, vinext, prisma monorepo) → biome check + tsc + bun test
+#   - Python (uv)                                 → ruff + mypy + pytest
+#   - Rust                                        → fmt + clippy + test
+#   - Swift on Linux                              → swift build + test + swift-format
+
+jobs:
+  commitlint:
+    name: Commit Lint
+    runs-on: ubuntu-latest
+    if: github.event.action != 'closed' || github.event.pull_request.merged != true
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Cache Bun install
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-commitlint
+      - name: Install commitlint
+        run: |
+          bun install conventional-changelog-conventionalcommits
+          bun install @commitlint/config-conventional@latest
+          bun install commitlint@latest
+      - name: Validate PR commits
+        if: github.event_name == 'pull_request'
+        run: |
+          bunx commitlint \
+            --from ${{ github.event.pull_request.head.sha }}~${{ github.event.pull_request.commits }} \
+            --to ${{ github.event.pull_request.head.sha }} \
+            --verbose
+      - name: Validate last commit
+        if: github.event_name == 'push'
+        run: bunx commitlint --last --verbose
+
+  # ============================================================================
+  # Node / Bun examples
+  # ============================================================================
+
+  node-examples:
+    name: Verify ${{ matrix.example }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example:
+          - hono-node
+          - hono-workers
+          - hono-vite-react-node
+          - hono-vite-react-workers
+          - vinext
+    defaults:
+      run:
+        working-directory: examples/${{ matrix.example }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Cache Bun install
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ matrix.example }}-${{ hashFiles(format('examples/{0}/package.json', matrix.example)) }}
+          restore-keys: |
+            bun-${{ runner.os }}-${{ matrix.example }}-
+      - name: Install dependencies
+        run: bun install --ignore-scripts
+      - name: Biome check
+        run: bunx --bun biome check
+      - name: TypeScript check
+        run: bun run typecheck
+      - name: Run tests
+        run: bun test
+
+  # Prisma monorepo has its own multi-workspace structure — verify separately.
+  hono-vite-react-workers-prisma:
+    name: Verify hono-vite-react-workers-prisma
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/hono-vite-react-workers-prisma
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Cache Bun install
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-prisma-${{ hashFiles('examples/hono-vite-react-workers-prisma/package.json') }}
+      - name: Install dependencies
+        run: bun install --ignore-scripts
+      - name: Generate Prisma client
+        run: bun run --cwd workers/db generate
+      - name: Biome check
+        run: bunx --bun biome check
+      - name: TypeScript check
+        run: bun run --filter '@app/*' typecheck
+      - name: Vite build (app worker)
+        run: bun run --cwd workers/app build
+      - name: Run tests
+        run: bun test
+
+  # ============================================================================
+  # Python (uv) examples
+  # ============================================================================
+
+  python-examples:
+    name: Verify ${{ matrix.example }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example: [python, python-cuda]
+    defaults:
+      run:
+        working-directory: examples/${{ matrix.example }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync
+      - name: Ruff check
+        run: uvx ruff check
+      - name: Ruff format check
+        run: uvx ruff format --check
+      - name: mypy
+        run: uv run mypy .
+        # CUDA-typed extensions (torch, cupy) often lack complete stubs.
+        continue-on-error: ${{ matrix.example == 'python-cuda' }}
+      - name: pytest
+        if: matrix.example == 'python'
+        run: uv run pytest
+
+  # ============================================================================
+  # Rust
+  # ============================================================================
+
+  rust:
+    name: Verify rust
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/rust
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: examples/rust
+      - name: cargo fmt
+        run: cargo fmt --all -- --check
+      - name: cargo clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+      - name: cargo test
+        run: cargo test --all-features --workspace
+
+  # ============================================================================
+  # Swift on Linux
+  # ============================================================================
+
+  swift:
+    name: Verify swift
+    runs-on: ubuntu-latest
+    container:
+      image: swift:6.0-noble
+    defaults:
+      run:
+        working-directory: examples/swift
+    steps:
+      - name: Install Node.js (for GHA action runtime in swift container)
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends nodejs
+      - uses: actions/checkout@v5
+      - name: Cache SPM
+        uses: actions/cache@v4
+        with:
+          path: |
+            examples/swift/.build
+            ~/.swiftpm
+          key: spm-linux-swift6-${{ hashFiles('examples/swift/Package.swift', 'examples/swift/Package.resolved') }}
+          restore-keys: |
+            spm-linux-swift6-
+      - name: swift-format lint
+        run: |
+          if [ -d Sources ] && [ -n "$(find Sources -name '*.swift' 2>/dev/null | head -1)" ]; then
+            swift-format lint --recursive --strict Sources
+          fi
+      - name: swift build
+        run: swift build --build-tests
+      - name: swift test
+        run: swift test --parallel
+
+  # swift-ios-tweak's build needs Theos + iOS SDK (~2GB); we skip that here and
+  # only lint the Swift sources. The example's own workflow guards the Theos
+  # steps behind a Makefile+control existence check.
+  swift-ios-tweak:
+    name: Verify swift-ios-tweak
+    runs-on: ubuntu-latest
+    container:
+      image: swift:6.0-noble
+    defaults:
+      run:
+        working-directory: examples/swift-ios-tweak
+    steps:
+      - name: Install Node.js
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends nodejs
+      - uses: actions/checkout@v5
+      - name: swift-format lint
+        run: |
+          if [ -d Sources ] && [ -n "$(find Sources -name '*.swift' 2>/dev/null | head -1)" ]; then
+            swift-format lint --recursive --strict Sources
+          fi
