@@ -7,8 +7,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
     DEBIAN_FRONTEND=noninteractive apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-      python3.11 python3-pip ca-certificates curl \
-    && ln -sf /usr/bin/python3.11 /usr/local/bin/python
+      python3.12 python3-pip ca-certificates curl \
+    && ln -sf /usr/bin/python3.12 /usr/local/bin/python
 
 # uv from the official image (avoids installer scripts).
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
