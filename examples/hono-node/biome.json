@@ -29,10 +29,10 @@
       "**/*.jsx",
       "**/*.json",
       "**/*.jsonc",
-      "!**/node_modules/**",
-      "!**/dist/**",
-      "!**/build/**",
-      "!**/coverage/**",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/build",
+      "!**/coverage",
       "!**/*.gen.ts"
     ]
   },
