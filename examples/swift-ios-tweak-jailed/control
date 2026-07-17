@@ -1,0 +1,11 @@
+Package: com.example.tweak
+Name: Tweak
+Version: 0.1.0
+Architecture: iphoneos-arm64
+Description: Template iOS tweak. Fill in Package identifier, Name, Description
+ and Maintainer before shipping. Sources live under Sources/$(Name)/.
+Depiction: https://example.com
+Maintainer: template
+Author: template
+Section: Tweaks
+Depends: mobilesubstrate
