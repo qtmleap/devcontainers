@@ -7,6 +7,11 @@ dependencies = [
     # Mach-O editor. Adds LC_LOAD_DYLIB to the target app binary so it
     # dyld-loads the injected tweak dylib on launch.
     "lief>=0.17.6",
+    # Frida controller side — attaches to the target, injects the JS
+    # agent compiled from frida/agent.ts by `make agent`.
+    # frida-tools also gives us frida-ps / frida-trace / frida-kill.
+    "frida>=17",
+    "frida-tools>=13",
 ]
 
 [dependency-groups]

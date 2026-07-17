@@ -516,6 +516,15 @@ $RECYCLE.BIN/
 .secrets
 !.secrets.example
 
+# === Frida agent build output ===
+# frida-compile bundles frida/agent.ts into frida/dist/agent.js. The
+# generated JS is a build artifact — regenerate via `make agent`.
+frida/dist/
+
+# === Node ===
+node_modules/
+bun.lock
+
 # === Theos ===
 .theos/
 packages/

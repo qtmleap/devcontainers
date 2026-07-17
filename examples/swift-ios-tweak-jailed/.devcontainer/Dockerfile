@@ -16,6 +16,8 @@ RUN \
     make perl fakeroot zip xz-utils lzma xxd binutils \
     libtinfo6 libxml2 libncurses6 libz3-dev \
     adb android-sdk-platform-tools \
+    # ObjC / C / ObjC++ formatter driven by `make format`.
+    clang-format \
     # libimobiledevice for idevicesyslog / os_log capture over USB.
     # class-dump-style tooling; recon primary.
     libimobiledevice-utils libimobiledevice6 ideviceinstaller libplist-utils \

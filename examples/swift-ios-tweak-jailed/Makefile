@@ -16,6 +16,11 @@
 #                     injecting the jailed dylib via LC_LOAD_DYLIB.
 #   make deploy     — Build the IPA, scp to $(THEOS_DEVICE_IP), install via
 #                     trollstorehelper, then launch $(TARGET_BUNDLE_ID).
+#   make agent      — Compile frida/agent.ts → frida/dist/agent.js.
+#   make attach     — Compile the agent, then run `frida -U -f
+#                     $(TARGET_BUNDLE_ID) -l frida/dist/agent.js`.
+#   make format     — clang-format every ObjC / C source under Sources/.
+#   make format-check — dry-run clang-format; nonzero exit on any diff.
 #   make hooks      — Point git core.hooksPath at scripts/.
 # ===========================================================================
 
@@ -183,6 +188,44 @@ deploy:: ipa
 	$(_SSH_CMD) 'uiopen "$(TARGET_BUNDLE_ID)://" 2>/dev/null \
 	              || open $(TARGET_BUNDLE_ID) 2>/dev/null \
 	              || echo "no launcher on device; open the app from SpringBoard"'
+
+# ---------------------------------------------------------------------------
+# Frida investigation agent. TypeScript source under frida/agent.ts is
+# bundled by frida-compile into frida/dist/agent.js, then injected into
+# the target by the Python frida CLI (`uv run frida ...`).
+#
+# The Frida controller side lives in Python (pyproject.toml pulls in
+# frida + frida-tools); the agent side is TypeScript (package.json pulls
+# in frida-compile + @types/frida-gum). Both toolchains ship in the
+# devcontainer.
+# ---------------------------------------------------------------------------
+FRIDA_SRC                := frida/agent.ts
+FRIDA_OUT                := frida/dist/agent.js
+
+.PHONY: agent
+agent:
+	bunx frida-compile $(FRIDA_SRC) -o $(FRIDA_OUT)
+
+.PHONY: attach
+attach: agent
+	@if [ -z "$(TARGET_BUNDLE_ID)" ]; then \
+	  echo "TARGET_BUNDLE_ID required (set in .env or on the CLI)"; exit 1; \
+	fi
+	uv run frida -U -f $(TARGET_BUNDLE_ID) -l $(FRIDA_OUT) --no-pause
+
+# ---------------------------------------------------------------------------
+# clang-format runner. Formats tracked ObjC / C sources under Sources/.
+# vendor/ is skipped so 3rd-party source stays byte-identical to upstream.
+# ---------------------------------------------------------------------------
+.PHONY: format
+format:
+	find Sources -type f \( -name '*.h' -o -name '*.m' -o -name '*.mm' \
+	  -o -name '*.c' -o -name '*.cpp' \) -exec clang-format -i {} +
+
+.PHONY: format-check
+format-check:
+	find Sources -type f \( -name '*.h' -o -name '*.m' -o -name '*.mm' \
+	  -o -name '*.c' -o -name '*.cpp' \) -exec clang-format --dry-run --Werror {} +
 
 # ---------------------------------------------------------------------------
 # Developer hooks. Point core.hooksPath at scripts/ so scripts/pre-commit

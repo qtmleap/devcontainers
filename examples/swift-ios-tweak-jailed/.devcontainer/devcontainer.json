@@ -73,7 +73,9 @@
         "ms-python.vscode-pylance",
         "redhat.vscode-yaml",
         "swiftlang.swift-vscode",
-        "tamasfe.even-better-toml"
+        "tamasfe.even-better-toml",
+        "ms-vscode.cpptools",
+        "xaver.clang-format"
       ],
       "settings": {}
     }
