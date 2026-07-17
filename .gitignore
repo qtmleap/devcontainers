@@ -76,3 +76,11 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/windows,macos,linux
+
+# Test artifacts (act runs)
+/bun.lock
+/node_modules/
+/package.json
+examples/*/bun.lock
+examples/*/.commitlintrc.yaml
+examples/*/.actrc
