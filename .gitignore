@@ -84,3 +84,17 @@ $RECYCLE.BIN/
 examples/*/bun.lock
 examples/*/.commitlintrc.yaml
 examples/*/.actrc
+
+# Non-Node examples: bun install side effects from act tests
+examples/python/node_modules/
+examples/python/package.json
+examples/python-cuda/node_modules/
+examples/python-cuda/package.json
+examples/rust/node_modules/
+examples/rust/package.json
+examples/swift/node_modules/
+examples/swift/package.json
+examples/swift-ios-tweak/package.json
+# Python uv-generated lockfiles (users regen in their project)
+examples/python/uv.lock
+examples/python-cuda/uv.lock
