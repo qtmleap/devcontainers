@@ -1,5 +1,16 @@
 services:
   app:
+    # Two-mode setup: if the pre-built image is available (GHA workflow
+    # `devcontainer-build.yaml` publishes it), Compose pulls it in seconds
+    # instead of running the 20+ min Ghidra + Theos + SDK install locally.
+    # If the image is missing (first run before CI ever ran, or a fork), it
+    # falls back to the local Dockerfile.
+    #
+    # `<OWNER>/<REPO>` is a placeholder — replace with your GitHub repo path
+    # (e.g. `image: ghcr.io/yuki-minakami/swift-ios-tweak-devcontainer:latest`)
+    # after the workflow's first run. Or leave commented to always build
+    # locally.
+    # image: ghcr.io/<OWNER>/<REPO>-devcontainer:latest
     build:
       context: .
       dockerfile: Dockerfile
