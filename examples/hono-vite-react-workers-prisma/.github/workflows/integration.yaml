@@ -31,7 +31,9 @@ jobs:
             bun-${{ runner.os }}-
       - name: Install commitlint
         run: |
-          bun install conventional-changelog-conventionalcommits commitlint@latest
+          bun install conventional-changelog-conventionalcommits
+          bun install @commitlint/config-conventional@latest
+          bun install commitlint@latest
       - name: Validate PR commits
         if: github.event_name == 'pull_request'
         run: |
