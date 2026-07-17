@@ -30,9 +30,9 @@
       "**/*.json",
       "**/*.jsonc",
       "**/*.css",
-      "!**/node_modules/**",
-      "!**/dist/**",
-      "!**/.wrangler/**",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/.wrangler",
       "!**/worker-configuration.d.ts",
       "!**/*.gen.ts"
     ]
