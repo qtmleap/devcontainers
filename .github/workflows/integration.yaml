@@ -202,7 +202,10 @@ jobs:
       run:
         working-directory: examples/swift
     steps:
+      # Runs before checkout, so examples/swift doesn't exist yet — override
+      # the working-directory default to the container root.
       - name: Install Node.js (for GHA action runtime in swift container)
+        working-directory: /
         run: |
           apt-get update
           apt-get install -y --no-install-recommends nodejs
@@ -239,6 +242,7 @@ jobs:
         working-directory: examples/swift-ios-tweak
     steps:
       - name: Install Node.js
+        working-directory: /
         run: |
           apt-get update
           apt-get install -y --no-install-recommends nodejs
@@ -274,6 +278,24 @@ jobs:
       - uses: actions/checkout@v5
         with:
           submodules: recursive
+      # Lockfiles are gitignored for the python/rust templates so downstream
+      # projects regenerate their own, but the Dockerfiles pin to them via
+      # `uv sync --frozen` / `cargo build --locked`. Generate them here so
+      # the docker build has a lockfile to consume.
+      - name: Setup uv (python examples)
+        if: startsWith(matrix.example, 'python')
+        uses: astral-sh/setup-uv@v6
+      - name: Generate uv.lock (python examples)
+        if: startsWith(matrix.example, 'python')
+        working-directory: examples/${{ matrix.example }}
+        run: uv lock
+      - name: Setup Rust toolchain (rust)
+        if: matrix.example == 'rust'
+        uses: dtolnay/rust-toolchain@stable
+      - name: Generate Cargo.lock (rust)
+        if: matrix.example == 'rust'
+        working-directory: examples/${{ matrix.example }}
+        run: cargo generate-lockfile
       - uses: docker/setup-buildx-action@v3
       - name: Build image (no push)
         uses: docker/build-push-action@v6
@@ -353,18 +375,24 @@ jobs:
         run: bun run --cwd workers/db generate
       - name: Build app worker
         run: bun run --cwd workers/app build
+      # Each worker's wrangler.toml points at `tsconfig = "tsconfig.json"`,
+      # which wrangler resolves relative to the process CWD (not the config
+      # file's dir). Run each dry-run from inside its own worker directory.
       - name: Wrangler dry-run (db)
+        working-directory: examples/hono-vite-react-workers-prisma/workers/db
         env:
           CLOUDFLARE_API_TOKEN: dry-run-not-real
           CLOUDFLARE_ACCOUNT_ID: dry-run-not-real
-        run: bunx wrangler deploy --dry-run --outdir=dist --config workers/db/wrangler.toml
+        run: bunx wrangler deploy --dry-run --outdir=dist
       - name: Wrangler dry-run (api)
+        working-directory: examples/hono-vite-react-workers-prisma/workers/api
         env:
           CLOUDFLARE_API_TOKEN: dry-run-not-real
           CLOUDFLARE_ACCOUNT_ID: dry-run-not-real
-        run: bunx wrangler deploy --dry-run --outdir=dist --config workers/api/wrangler.toml
+        run: bunx wrangler deploy --dry-run --outdir=dist
       - name: Wrangler dry-run (app)
+        working-directory: examples/hono-vite-react-workers-prisma/workers/app
         env:
           CLOUDFLARE_API_TOKEN: dry-run-not-real
           CLOUDFLARE_ACCOUNT_ID: dry-run-not-real
-        run: bunx wrangler deploy --dry-run --outdir=dist --config workers/app/wrangler.toml
+        run: bunx wrangler deploy --dry-run --outdir=dist
