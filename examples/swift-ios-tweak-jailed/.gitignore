@@ -534,10 +534,12 @@ assets/*.ipa
 !assets/.gitkeep
 
 # === Vendored 3rd-party libs ===
-# Both Dobby (prebuilt iOS .a) and fishhook (2 source files) are fetched
-# by scripts/fetch_vendors.sh — called automatically during devcontainer
-# postCreate. Keeping them out of git means the checkout stays clean and
-# upstream drift is a single script re-run away.
-vendor/dobby/
-vendor/fishhook/
+# Dobby (prebuilt iOS static lib) and fishhook (2 source files) are
+# committed under vendor/ so `git clone → make jailed` works out of the
+# box. Use scripts/fetch_vendors.sh (FORCE=1) to refresh them to upstream
+# latest.
+#
+# The `lib/` rule in the Python section above (line ~273) would otherwise
+# catch vendor/dobby/lib/; override for our specific vendored path.
+!vendor/dobby/lib/
 
