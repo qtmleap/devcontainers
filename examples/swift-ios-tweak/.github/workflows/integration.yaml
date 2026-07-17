@@ -58,11 +58,20 @@ jobs:
   format:
     name: swift-format
     runs-on: ubuntu-latest
-    container: swift:6.0-noble
-    if: hashFiles('Sources/**/*.swift') != ''
+    container:
+      image: swift:6.0-noble
     steps:
       - uses: actions/checkout@v5
+      - name: Skip if no Sources
+        id: sources
+        run: |
+          if [ -d Sources ] && [ -n "$(find Sources -name '*.swift' 2>/dev/null | head -1)" ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
       - name: swift-format lint
+        if: steps.sources.outputs.found == 'true'
         run: swift-format lint --recursive --strict Sources
 
   build:
@@ -73,7 +82,21 @@ jobs:
         with:
           submodules: recursive
 
+      # A template checkout has no Theos project yet (no Makefile / control /
+      # .x sources). Skip the heavy Theos install + build in that case so the
+      # workflow is green until the user adds their tweak sources.
+      - name: Detect Theos project
+        id: theos_project
+        run: |
+          if [ -f Makefile ] && [ -f control ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+            echo "::notice::No Makefile+control found; skipping Theos build (add tweak sources to enable)"
+          fi
+
       - name: Install host build tools
+        if: steps.theos_project.outputs.found == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -83,6 +106,7 @@ jobs:
             python3 python3-pip
 
       - name: Install ldid
+        if: steps.theos_project.outputs.found == 'true'
         run: |
           curl -L -o /tmp/ldid \
             "https://github.com/ProcursusTeam/ldid/releases/download/${LDID_VERSION}/ldid_linux_x86_64"
@@ -90,6 +114,7 @@ jobs:
           ldid -V 2>&1 | head -1 || true
 
       - name: Cache Theos
+        if: steps.theos_project.outputs.found == 'true'
         id: cache-theos
         uses: actions/cache@v4
         with:
@@ -97,7 +122,7 @@ jobs:
           key: theos-linux-${{ env.IOS_SDK_VERSION }}-v1
 
       - name: Install Theos
-        if: steps.cache-theos.outputs.cache-hit != 'true'
+        if: steps.theos_project.outputs.found == 'true' && steps.cache-theos.outputs.cache-hit != 'true'
         run: |
           git clone --recursive https://github.com/theos/theos.git "$THEOS"
 
@@ -113,18 +138,21 @@ jobs:
           cp -R "/tmp/sdks-master/iPhoneOS${IOS_SDK_VERSION}.sdk" "$THEOS/sdks/"
 
       - name: Verify Theos
+        if: steps.theos_project.outputs.found == 'true'
         run: |
           test -d "$THEOS/sdks/iPhoneOS${IOS_SDK_VERSION}.sdk"
           test -x "$THEOS/toolchain/linux/iphone/bin/clang"
           "$THEOS/toolchain/linux/iphone/bin/clang" --version
 
       - name: Build (debug)
+        if: steps.theos_project.outputs.found == 'true'
         run: |
           make clean
           make package
           ls -la packages/
 
       - name: Upload debug artifact
+        if: steps.theos_project.outputs.found == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: tweak-debug-${{ github.sha }}
