@@ -1,16 +1,19 @@
 services:
   app:
-    # Two-mode setup: if the pre-built image is available (GHA workflow
-    # `devcontainer-build.yaml` publishes it), Compose pulls it in seconds
-    # instead of running the 20+ min Ghidra + Theos + SDK install locally.
-    # If the image is missing (first run before CI ever ran, or a fork), it
-    # falls back to the local Dockerfile.
+    # By default we pull the pre-built image published by the upstream
+    # template repo's CI (~5 min pull vs. ~25 min local build of Theos +
+    # iPhoneOS SDK + Ghidra + Swift toolchain).
     #
-    # `<OWNER>/<REPO>` is a placeholder — replace with your GitHub repo path
-    # (e.g. `image: ghcr.io/yuki-minakami/swift-ios-tweak-devcontainer:latest`)
-    # after the workflow's first run. Or leave commented to always build
-    # locally.
-    # image: ghcr.io/<OWNER>/<REPO>-devcontainer:latest
+    # DOCKER_OWNER defaults to the upstream maintainer of this template; if
+    # you fork and want to publish your own image (or run
+    # `.github/workflows/devcontainer-build.yaml` in your fork), override
+    # DOCKER_OWNER in a .env file next to this compose.yaml:
+    #   DOCKER_OWNER=your-github-username
+    #
+    # To force a local build instead of pulling — useful when hacking the
+    # Dockerfile — comment out `image:` and the pre-built pull is skipped
+    # (Compose falls through to `build:`).
+    image: ghcr.io/${DOCKER_OWNER:-yuki-minakami}/devcontainer-swift-ios-tweak:latest
     build:
       context: .
       dockerfile: Dockerfile
