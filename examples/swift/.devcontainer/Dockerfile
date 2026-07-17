@@ -11,7 +11,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean \
     && DEBIAN_FRONTEND=noninteractive apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        ca-certificates curl git sudo openssh-client zsh tzdata locales \
+        ca-certificates curl git git-filter-repo sudo openssh-client zsh tzdata locales \
     && locale-gen en_US.UTF-8
 
 ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8

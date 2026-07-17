@@ -11,7 +11,7 @@ RUN \
     --mount=type=cache,target=/var/cache/apt,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
     apt-get update && apt-get install -y --no-install-recommends \
-    wget unzip jq \
+    wget unzip jq git-filter-repo \
     radare2 apktool \
     make perl fakeroot zip xz-utils lzma xxd binutils \
     libtinfo6 libxml2 libncurses6 libz3-dev \

@@ -1,6 +1,6 @@
 # Production image for a CUDA-dependent Python app.
 # Uses the CUDA runtime base (not devel) — inference / trained-model serving.
-FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04 AS runtime
+FROM nvidia/cuda:12.9.1-cudnn-runtime-ubuntu24.04 AS runtime
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
