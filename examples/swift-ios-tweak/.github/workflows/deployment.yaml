@@ -44,21 +44,8 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      # A bare template checkout has no Theos project yet (no Makefile /
-      # control / .x sources). Detect and skip the heavy install + build so
-      # the release workflow can dry-run cleanly on a fresh template.
-      - name: Detect Theos project
-        id: theos_project
-        run: |
-          if [ -f Makefile ] && [ -f control ]; then
-            echo "found=true" >> $GITHUB_OUTPUT
-          else
-            echo "found=false" >> $GITHUB_OUTPUT
-            echo "::notice::No Makefile+control found; skipping Theos release build (add tweak sources to enable)"
-          fi
 
       - name: Install host build tools
-        if: steps.theos_project.outputs.found == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -68,7 +55,6 @@ jobs:
             python3 python3-pip
 
       - name: Install ldid
-        if: steps.theos_project.outputs.found == 'true'
         run: |
           curl -L -o /tmp/ldid \
             "https://github.com/ProcursusTeam/ldid/releases/download/${LDID_VERSION}/ldid_linux_x86_64"
@@ -76,7 +62,6 @@ jobs:
           ldid -V 2>&1 | head -1 || true
 
       - name: Cache Theos
-        if: steps.theos_project.outputs.found == 'true'
         id: cache-theos
         uses: actions/cache@v4
         with:
@@ -84,9 +69,9 @@ jobs:
           key: theos-linux-${{ env.IOS_SDK_VERSION }}-v1
 
       - name: Install Theos
-        if: steps.theos_project.outputs.found == 'true' && steps.cache-theos.outputs.cache-hit != 'true'
+        if: steps.cache-theos.outputs.cache-hit != 'true'
         run: |
-          git clone --recursive https://github.com/theos/theos.git "$THEOS"
+          [ -d "$THEOS/.git" ] || git clone --recursive https://github.com/theos/theos.git "$THEOS"
 
           ARCH=$(uname -m)
           curl -fsSL \
@@ -100,7 +85,6 @@ jobs:
           cp -R "/tmp/sdks-master/iPhoneOS${IOS_SDK_VERSION}.sdk" "$THEOS/sdks/"
 
       - name: Verify Theos
-        if: steps.theos_project.outputs.found == 'true'
         run: |
           test -d "$THEOS/sdks/iPhoneOS${IOS_SDK_VERSION}.sdk"
           test -x "$THEOS/toolchain/linux/iphone/bin/clang"
@@ -112,14 +96,12 @@ jobs:
       # what a tagged Release should ship. Release builds get -O3, stripped
       # debug symbols, and no "+debug" suffix on the .deb.
       - name: Build release .deb
-        if: steps.theos_project.outputs.found == 'true'
         run: |
           make clean
           make package FINALPACKAGE=1
           ls -la packages/
 
       - name: Stage release assets
-        if: steps.theos_project.outputs.found == 'true'
         id: assets
         run: |
           mkdir -p dist
@@ -127,14 +109,12 @@ jobs:
           ls -la dist/
 
       - name: Compute SHA256 checksums
-        if: steps.theos_project.outputs.found == 'true'
         run: |
           cd dist
           sha256sum * > SHA256SUMS
           cat SHA256SUMS
 
       - name: Extract release notes from CHANGELOG
-        if: steps.theos_project.outputs.found == 'true'
         id: notes
         run: |
           TAG="${{ steps.tag.outputs.value }}"
@@ -155,7 +135,7 @@ jobs:
           cat release_notes.md
 
       - name: Publish release
-        if: steps.theos_project.outputs.found == 'true'
+        if: env.ACT != 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.value }}

@@ -1,0 +1,10 @@
+Package: com.example.app-tweak
+Name: App Tweak
+Version: 0.1.0
+Architecture: iphoneos-arm64
+Description: Minimal example iOS tweak template. Replace hooks and package
+ metadata with your own before shipping.
+Depiction: https://example.com
+Maintainer: template
+Author: template
+Section: Tweaks
