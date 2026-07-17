@@ -15,7 +15,9 @@ dev = [
 ]
 
 [tool.ruff]
-line-length = 100
+# Match .commitlintrc.yaml's header-max-length so a one-line commit and
+# a one-line comment can share the same terminal width without wrapping.
+line-length = 128
 target-version = "py312"
 
 [tool.ruff.lint]

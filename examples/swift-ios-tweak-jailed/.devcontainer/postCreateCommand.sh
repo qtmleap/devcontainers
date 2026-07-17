@@ -32,10 +32,10 @@ if [ -f .gitmodules ]; then
   git submodule update --init --recursive
 fi
 
-# Vendored Dobby static lib — no-op if vendor/dobby/lib/libdobby.a is
-# already present. Force re-fetch with FORCE=1.
-if [ -x scripts/fetch_dobby.sh ]; then
-  scripts/fetch_dobby.sh
+# Vendored 3rd-party libs (Dobby + fishhook). Idempotent — each library
+# is skipped when already present. Force re-fetch with FORCE=1.
+if [ -x scripts/fetch_vendors.sh ]; then
+  scripts/fetch_vendors.sh
 fi
 
 # Sync deps if the project defines them.

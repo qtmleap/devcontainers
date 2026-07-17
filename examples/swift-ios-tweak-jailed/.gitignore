@@ -533,8 +533,11 @@ packages/
 assets/*.ipa
 !assets/.gitkeep
 
-# === Vendored binary artifacts ===
-# Dobby is fetched via scripts/fetch_dobby.sh (or postCreateCommand.sh
-# during devcontainer setup). fishhook is 2 source files, tracked in git.
+# === Vendored 3rd-party libs ===
+# Both Dobby (prebuilt iOS .a) and fishhook (2 source files) are fetched
+# by scripts/fetch_vendors.sh — called automatically during devcontainer
+# postCreate. Keeping them out of git means the checkout stays clean and
+# upstream drift is a single script re-run away.
 vendor/dobby/
+vendor/fishhook/
 
