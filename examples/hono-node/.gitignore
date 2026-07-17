@@ -227,3 +227,4 @@ $RECYCLE.BIN/
 # === Act (GitHub Actions local runner) ===
 .secrets
 !.secrets.example
+biome-plugins/

@@ -233,3 +233,4 @@ worker-configuration.d.ts
 # === Act (GitHub Actions local runner) ===
 .secrets
 !.secrets.example
+biome-plugins/
