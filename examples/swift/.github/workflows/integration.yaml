@@ -57,8 +57,15 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    container: swift:6.0-noble
+    container:
+      image: swift:6.0-noble
+      # Node runtime is required by actions/cache internals; the base swift
+      # image is minimal, so install it before any cache-based step runs.
     steps:
+      - name: Install Node.js (for GHA action runtime)
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends nodejs
       - uses: actions/checkout@v5
       - name: Cache SPM
         uses: actions/cache@v4
@@ -75,8 +82,15 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    container: swift:6.0-noble
+    container:
+      image: swift:6.0-noble
+      # Node runtime is required by actions/cache internals; the base swift
+      # image is minimal, so install it before any cache-based step runs.
     steps:
+      - name: Install Node.js (for GHA action runtime)
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends nodejs
       - uses: actions/checkout@v5
       - name: Cache SPM
         uses: actions/cache@v4
