@@ -248,3 +248,123 @@ jobs:
           if [ -d Sources ] && [ -n "$(find Sources -name '*.swift' 2>/dev/null | head -1)" ]; then
             swift-format lint --recursive --strict Sources
           fi
+
+  # ============================================================================
+  # Deployment build validation
+  # ============================================================================
+  # These jobs mirror what each example's deployment.yaml does, but stop short
+  # of publishing. Docker examples run `docker build` without push; Workers
+  # examples run `wrangler deploy --dry-run` which resolves bindings and bundles
+  # the worker without hitting the Cloudflare API.
+
+  docker-build:
+    name: Docker build ${{ matrix.example }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example:
+          - hono-node
+          - hono-vite-react-node
+          - python
+          - python-cuda
+          - rust
+          - swift
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: examples/${{ matrix.example }}
+          push: false
+          tags: verify/${{ matrix.example }}:local
+          cache-from: type=gha,scope=${{ matrix.example }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.example }}
+
+  wrangler-dryrun:
+    name: Wrangler dry-run ${{ matrix.example }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - example: hono-workers
+            build: ""
+            command: "deploy --dry-run --outdir=dist src/index.ts"
+          - example: hono-vite-react-workers
+            build: "bun run build"
+            command: "deploy --dry-run --outdir=dist"
+          - example: vinext
+            build: "bunx vinext build"
+            command: "deploy --dry-run"
+    defaults:
+      run:
+        working-directory: examples/${{ matrix.example }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Cache Bun install
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ matrix.example }}-deploy-${{ hashFiles(format('examples/{0}/package.json', matrix.example)) }}
+      - name: Install dependencies
+        run: bun install --ignore-scripts
+      - name: Pre-deploy build
+        if: matrix.build != ''
+        run: ${{ matrix.build }}
+      - name: Wrangler dry-run
+        env:
+          CLOUDFLARE_API_TOKEN: dry-run-not-real
+          CLOUDFLARE_ACCOUNT_ID: dry-run-not-real
+        run: bunx wrangler ${{ matrix.command }}
+
+  # The Prisma monorepo needs Prisma client generated and app worker built
+  # before wrangler can bundle the api / db / app workers. Verify by running
+  # `wrangler deploy --dry-run` on each worker in turn.
+  wrangler-dryrun-prisma:
+    name: Wrangler dry-run hono-vite-react-workers-prisma
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/hono-vite-react-workers-prisma
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Cache Bun install
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-prisma-deploy-${{ hashFiles('examples/hono-vite-react-workers-prisma/package.json') }}
+      - name: Install dependencies
+        run: bun install --ignore-scripts
+      - name: Generate Prisma client
+        run: bun run --cwd workers/db generate
+      - name: Build app worker
+        run: bun run --cwd workers/app build
+      - name: Wrangler dry-run (db)
+        env:
+          CLOUDFLARE_API_TOKEN: dry-run-not-real
+          CLOUDFLARE_ACCOUNT_ID: dry-run-not-real
+        run: bunx wrangler deploy --dry-run --outdir=dist --config workers/db/wrangler.toml
+      - name: Wrangler dry-run (api)
+        env:
+          CLOUDFLARE_API_TOKEN: dry-run-not-real
+          CLOUDFLARE_ACCOUNT_ID: dry-run-not-real
+        run: bunx wrangler deploy --dry-run --outdir=dist --config workers/api/wrangler.toml
+      - name: Wrangler dry-run (app)
+        env:
+          CLOUDFLARE_API_TOKEN: dry-run-not-real
+          CLOUDFLARE_ACCOUNT_ID: dry-run-not-real
+        run: bunx wrangler deploy --dry-run --outdir=dist --config workers/app/wrangler.toml
