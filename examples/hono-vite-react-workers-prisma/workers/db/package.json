@@ -1,0 +1,28 @@
+{
+  "name": "@app/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --config wrangler.toml",
+    "generate": "bunx prisma generate",
+    "migrate": "bun wrangler d1 migrations apply app-db --local --config wrangler.toml",
+    "migrate:remote": "bun wrangler d1 migrations apply app-db --remote --config wrangler.toml --env=${CLOUDFLARE_ENV:-staging}",
+    "migrate:create": "bunx prisma migrate diff --from-schema-datamodel=prisma/schema.prisma --to-empty --script",
+    "studio": "bunx prisma studio",
+    "deploy": "bun wrangler deploy --config wrangler.toml --env=${CLOUDFLARE_ENV:-staging}",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@app/shared": "workspace:*",
+    "@prisma/adapter-d1": "^7",
+    "@prisma/client": "^7",
+    "@prisma/client-runtime-utils": "^7",
+    "hono": "^4",
+    "prisma": "^7",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4"
+  }
+}

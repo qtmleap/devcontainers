@@ -1,0 +1,31 @@
+name = "hono-workers-app"
+main = "src/index.ts"
+compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat_v2"]
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[dev]
+port = 8787
+ip = "0.0.0.0"
+local_protocol = "http"
+
+# --- Environments ---
+
+[env.staging]
+name = "hono-workers-app-staging"
+workers_dev = true
+
+[env.staging.observability]
+enabled = true
+head_sampling_rate = 1
+
+[env.production]
+name = "hono-workers-app"
+workers_dev = false
+
+[env.production.observability]
+enabled = true
+head_sampling_rate = 1

@@ -1,0 +1,18 @@
+{
+  "[swift]": {
+    "editor.defaultFormatter": "swiftlang.swift-vscode",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4
+  },
+
+  "swift.path": "/usr/bin/swift",
+  "swift.buildPath": ".build",
+  "swift.disableAutoResolve": false,
+  "swift.diagnostics": true,
+  "swift.enableTerminalEnvironment": true,
+  "swift.sourcekit-lsp.backgroundIndexing": true,
+  "swift.format.toolchainPath": "/usr/bin/swift-format",
+
+  "sourcekit-lsp.serverPath": "/usr/bin/sourcekit-lsp",
+  "sourcekit-lsp.backgroundIndexing": true
+}

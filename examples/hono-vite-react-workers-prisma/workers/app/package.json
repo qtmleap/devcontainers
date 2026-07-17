@@ -1,0 +1,29 @@
+{
+  "name": "@app/app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc -b --noEmit && vite build",
+    "preview": "vite preview",
+    "deploy": "vite build && bun wrangler deploy --config wrangler.toml --keep-vars --env=${CLOUDFLARE_ENV:-staging}",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@app/shared": "workspace:*",
+    "hono": "^4",
+    "react": "^19",
+    "react-dom": "^19",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1",
+    "@cloudflare/workers-types": "^4",
+    "@types/node": "^26",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react-swc": "^4",
+    "vite": "^8"
+  }
+}

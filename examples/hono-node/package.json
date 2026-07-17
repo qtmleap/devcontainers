@@ -1,0 +1,25 @@
+{
+  "name": "hono-node-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch --hot src/index.ts",
+    "start": "bun src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "bunx --bun biome check",
+    "format": "bunx --bun biome check --write",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1",
+    "hono": "^4",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2",
+    "@types/bun": "^1",
+    "@types/node": "^26",
+    "typescript": "^7"
+  }
+}

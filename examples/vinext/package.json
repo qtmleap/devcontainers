@@ -1,0 +1,39 @@
+{
+  "name": "vinext-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "bunx vinext init",
+    "dev": "bunx vinext dev",
+    "build": "bunx vinext build",
+    "start": "bunx vinext start",
+    "check": "bunx vinext check",
+    "deploy": "bunx @vinext/cloudflare deploy",
+    "typecheck": "tsc --noEmit",
+    "lint": "bunx --bun biome check",
+    "format": "bunx --bun biome check --write",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "next": "^16",
+    "react": "^19.2",
+    "react-dom": "^19.2",
+    "react-server-dom-webpack": "^19.2",
+    "vinext": "latest",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2",
+    "@cloudflare/vite-plugin": "^1",
+    "@cloudflare/workers-types": "^4",
+    "@types/bun": "^1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vinext/cloudflare": "latest",
+    "@vitejs/plugin-rsc": "latest",
+    "typescript": "^7",
+    "vite": "^8",
+    "wrangler": "^4"
+  }
+}

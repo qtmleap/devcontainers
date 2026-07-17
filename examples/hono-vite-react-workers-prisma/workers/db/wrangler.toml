@@ -1,0 +1,37 @@
+name = "app-db"
+main = "src/index.ts"
+compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
+tsconfig = "tsconfig.json"
+
+[dev]
+port = 8686
+ip = "0.0.0.0"
+local_protocol = "http"
+inspector_port = 9230
+
+# Local D1 database (wrangler creates a SQLite file under .wrangler/state/).
+# Migrations run against it via `bun wrangler d1 migrations apply app-db --local`.
+[[d1_databases]]
+binding = "DB"
+database_name = "app-db"
+database_id = "REPLACE_WITH_YOUR_LOCAL_D1_ID"
+migrations_dir = "prisma/migrations"
+
+[env.staging]
+workers_dev = true
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "app-db-staging"
+database_id = "REPLACE_WITH_YOUR_STAGING_D1_ID"
+migrations_dir = "prisma/migrations"
+
+[env.production]
+workers_dev = false
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "app-db-production"
+database_id = "REPLACE_WITH_YOUR_PROD_D1_ID"
+migrations_dir = "prisma/migrations"

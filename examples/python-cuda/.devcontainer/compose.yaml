@@ -1,0 +1,34 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - venv:/home/vscode/app/.venv
+      - uv-cache:/home/vscode/.cache/uv
+      # HF datasets / models cache. Sharing this across container recreations
+      # avoids re-downloading multi-GB shards every rebuild.
+      - hf-cache:/home/vscode/.cache/huggingface
+      - ../:/home/vscode/app:cached
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    # DataLoader workers on CUDA can consume more shared memory than the
+    # default 64MB; 16GB matches typical CUDA training rigs.
+    shm_size: 16gb
+    tty: true
+    stdin_open: true
+    # Expose all host GPUs to the container. Requires nvidia-container-toolkit
+    # on the host and Docker >= 19.03.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  venv:
+  uv-cache:
+  hf-cache:

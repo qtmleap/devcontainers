@@ -1,0 +1,48 @@
+name = "app-app"
+main = "src/worker.ts"
+compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat_v2"]
+tsconfig = "tsconfig.json"
+
+[assets]
+directory = "dist"
+not_found_handling = "single-page-application"
+binding = "ASSETS"
+
+# Call the API worker directly via service binding rather than public URL —
+# same-account traffic bypasses the internet and inherits observability.
+[[services]]
+binding = "API_SERVICE"
+service = "app-api"
+
+[dev]
+port = 5173
+ip = "0.0.0.0"
+local_protocol = "http"
+
+[observability]
+enabled = true
+
+[env.staging]
+workers_dev = true
+
+[env.staging.assets]
+directory = "dist"
+not_found_handling = "single-page-application"
+binding = "ASSETS"
+
+[[env.staging.services]]
+binding = "API_SERVICE"
+service = "app-api-staging"
+
+[env.production]
+workers_dev = false
+
+[env.production.assets]
+directory = "dist"
+not_found_handling = "single-page-application"
+binding = "ASSETS"
+
+[[env.production.services]]
+binding = "API_SERVICE"
+service = "app-api-production"

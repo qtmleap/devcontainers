@@ -1,0 +1,20 @@
+{
+  "name": "@app/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --config wrangler.toml",
+    "deploy": "bun wrangler deploy --config wrangler.toml --keep-vars --minify --env=${CLOUDFLARE_ENV:-staging}",
+    "typecheck": "tsc --noEmit",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings --config wrangler.toml"
+  },
+  "dependencies": {
+    "@app/shared": "workspace:*",
+    "hono": "^4",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4"
+  }
+}

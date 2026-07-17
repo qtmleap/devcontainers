@@ -1,0 +1,21 @@
+generator client {
+  provider   = "prisma-client-js"
+  output     = "../src/generated/prisma"
+  // Workers runtime needs the wasm-free engine.
+  engineType = "client"
+}
+
+// Prisma 7 removed the schema-level `url` field. Runtime uses the adapter
+// (see workers/db/src/index.ts) and `prisma migrate` uses the URL from
+// prisma.config.ts.
+datasource db {
+  provider = "sqlite"
+}
+
+// Example model. Replace with the project's own domain.
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+}

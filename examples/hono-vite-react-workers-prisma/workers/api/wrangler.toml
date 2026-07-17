@@ -1,0 +1,44 @@
+name = "app-api"
+main = "src/index.ts"
+compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat_v2"]
+tsconfig = "tsconfig.json"
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[dev]
+port = 8787
+ip = "0.0.0.0"
+local_protocol = "http"
+inspector_port = 9229
+
+# Bind the DB worker so this worker calls Prisma via service binding rather
+# than embedding @prisma/client (which would blow the Workers 1MB script
+# size limit).
+[[services]]
+binding = "DB_SERVICE"
+service = "app-db"
+
+[env.staging]
+workers_dev = true
+
+[[env.staging.services]]
+binding = "DB_SERVICE"
+service = "app-db-staging"
+
+[env.staging.observability]
+enabled = true
+head_sampling_rate = 1
+
+[env.production]
+workers_dev = false
+
+[[env.production.services]]
+binding = "DB_SERVICE"
+service = "app-db-production"
+
+[env.production.observability]
+enabled = true
+head_sampling_rate = 1
