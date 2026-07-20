@@ -27,7 +27,7 @@ permissions:
 jobs:
   commitlint:
     name: Commit Lint
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-24.04]
     if: github.event.action != 'closed' || github.event.pull_request.merged != true
     steps:
       - uses: actions/checkout@v5
@@ -63,7 +63,7 @@ jobs:
 
   node-examples:
     name: Verify ${{ matrix.example }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-24.04]
     strategy:
       fail-fast: false
       matrix:
@@ -102,7 +102,7 @@ jobs:
   # Prisma monorepo has its own multi-workspace structure — verify separately.
   hono-vite-react-workers-prisma:
     name: Verify hono-vite-react-workers-prisma
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-24.04]
     defaults:
       run:
         working-directory: examples/hono-vite-react-workers-prisma
@@ -137,7 +137,7 @@ jobs:
 
   python-examples:
     name: Verify ${{ matrix.example }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-24.04]
     strategy:
       fail-fast: false
       matrix:
@@ -170,7 +170,7 @@ jobs:
 
   rust:
     name: Verify rust
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-24.04]
     defaults:
       run:
         working-directory: examples/rust
@@ -195,7 +195,7 @@ jobs:
 
   swift:
     name: Verify swift
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-24.04]
     container:
       image: swift:6.0-noble
     defaults:
@@ -234,7 +234,7 @@ jobs:
   # steps behind a Makefile+control existence check.
   swift-ios-tweak:
     name: Verify swift-ios-tweak
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-24.04]
     container:
       image: swift:6.0-noble
     defaults:
@@ -263,7 +263,7 @@ jobs:
 
   docker-build:
     name: Docker build ${{ matrix.example }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-24.04]
     strategy:
       fail-fast: false
       matrix:
@@ -308,7 +308,7 @@ jobs:
 
   wrangler-dryrun:
     name: Wrangler dry-run ${{ matrix.example }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-24.04]
     strategy:
       fail-fast: false
       matrix:
@@ -353,7 +353,7 @@ jobs:
   # `wrangler deploy --dry-run` on each worker in turn.
   wrangler-dryrun-prisma:
     name: Wrangler dry-run hono-vite-react-workers-prisma
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-24.04]
     defaults:
       run:
         working-directory: examples/hono-vite-react-workers-prisma
