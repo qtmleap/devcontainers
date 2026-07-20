@@ -30,18 +30,18 @@ jobs:
     runs-on: [self-hosted, ubuntu-24.04]
     if: github.event.action != 'closed' || github.event.pull_request.merged != true
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
       - name: Cache Bun install
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-commitlint
@@ -81,18 +81,18 @@ jobs:
       run:
         working-directory: examples/${{ matrix.example }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - name: Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
       - name: Cache Bun install
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ matrix.example }}-${{ hashFiles(format('examples/{0}/package.json', matrix.example)) }}
@@ -115,18 +115,18 @@ jobs:
       run:
         working-directory: examples/hono-vite-react-workers-prisma
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - name: Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
       - name: Cache Bun install
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-prisma-${{ hashFiles('examples/hono-vite-react-workers-prisma/package.json') }}
@@ -158,8 +158,8 @@ jobs:
       run:
         working-directory: examples/${{ matrix.example }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v8
         with:
           enable-cache: true
       - name: Install dependencies
@@ -187,7 +187,7 @@ jobs:
       run:
         working-directory: examples/rust
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -221,9 +221,9 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends nodejs
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Cache SPM
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             examples/swift/.build
@@ -258,7 +258,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends nodejs
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: swift-format lint
         run: |
           if [ -d Sources ] && [ -n "$(find Sources -name '*.swift' 2>/dev/null | head -1)" ]; then
@@ -287,7 +287,7 @@ jobs:
           - rust
           - swift
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       # Lockfiles are gitignored for the python/rust templates so downstream
@@ -296,7 +296,7 @@ jobs:
       # the docker build has a lockfile to consume.
       - name: Setup uv (python examples)
         if: startsWith(matrix.example, 'python')
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v8
       - name: Generate uv.lock (python examples)
         if: startsWith(matrix.example, 'python')
         working-directory: examples/${{ matrix.example }}
@@ -308,7 +308,7 @@ jobs:
         if: matrix.example == 'rust'
         working-directory: examples/${{ matrix.example }}
         run: cargo generate-lockfile
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - name: Build image (no push)
         uses: docker/build-push-action@v6
         with:
@@ -338,18 +338,18 @@ jobs:
       run:
         working-directory: examples/${{ matrix.example }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - name: Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
       - name: Cache Bun install
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ matrix.example }}-deploy-${{ hashFiles(format('examples/{0}/package.json', matrix.example)) }}
@@ -374,18 +374,18 @@ jobs:
       run:
         working-directory: examples/hono-vite-react-workers-prisma
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - name: Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
       - name: Cache Bun install
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-prisma-deploy-${{ hashFiles('examples/hono-vite-react-workers-prisma/package.json') }}
