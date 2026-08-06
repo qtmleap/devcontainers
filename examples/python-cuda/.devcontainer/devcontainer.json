@@ -12,7 +12,8 @@
     "ANTHROPIC_AUTH_TOKEN": "${localEnv:ANTHROPIC_AUTH_TOKEN}",
     "HF_TOKEN": "${localEnv:HF_TOKEN}",
     "WANDB_API_KEY": "${localEnv:WANDB_API_KEY}",
-    "WANDB_BASE_URL": "${localEnv:WANDB_BASE_URL}"
+    "WANDB_BASE_URL": "${localEnv:WANDB_BASE_URL}",
+    "WAKATIME_API_KEY": "${localEnv:WAKATIME_API_KEY}"
   },
   "containerEnv": {
     "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
@@ -52,14 +53,15 @@
       "extensions": [
         "EditorConfig.EditorConfig",
         "PKief.material-icon-theme",
+        "WakaTime.vscode-wakatime",
         "antfu.file-nesting",
         "bierner.github-markdown-preview",
         "bierner.markdown-preview-github-styles",
         "charliermarsh.ruff",
+        "ms-python.debugpy",
+        "ms-python.mypy-type-checker",
         "ms-python.python",
         "ms-python.vscode-pylance",
-        "ms-python.mypy-type-checker",
-        "ms-python.debugpy",
         "ms-toolsai.jupyter",
         "ms-toolsai.jupyter-keymap",
         "redhat.vscode-yaml",
