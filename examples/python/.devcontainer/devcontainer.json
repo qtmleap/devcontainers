@@ -9,7 +9,8 @@
   "remoteUser": "vscode",
   "remoteEnv": {
     "ANTHROPIC_BASE_URL": "${localEnv:ANTHROPIC_BASE_URL}",
-    "ANTHROPIC_AUTH_TOKEN": "${localEnv:ANTHROPIC_AUTH_TOKEN}"
+    "ANTHROPIC_AUTH_TOKEN": "${localEnv:ANTHROPIC_AUTH_TOKEN}",
+    "WAKATIME_API_KEY": "${localEnv:WAKATIME_API_KEY}"
   },
   "containerEnv": {
     "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
@@ -51,14 +52,15 @@
       "extensions": [
         "EditorConfig.EditorConfig",
         "PKief.material-icon-theme",
+        "WakaTime.vscode-wakatime",
         "antfu.file-nesting",
         "bierner.github-markdown-preview",
         "bierner.markdown-preview-github-styles",
         "charliermarsh.ruff",
+        "ms-python.debugpy",
+        "ms-python.mypy-type-checker",
         "ms-python.python",
         "ms-python.vscode-pylance",
-        "ms-python.mypy-type-checker",
-        "ms-python.debugpy",
         "redhat.vscode-yaml",
         "tamasfe.even-better-toml"
       ],
