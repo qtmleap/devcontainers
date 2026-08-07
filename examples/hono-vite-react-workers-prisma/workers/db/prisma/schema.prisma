@@ -1,8 +1,11 @@
+// `prisma-client` (not the legacy `prisma-client-js`) is required here: the old
+// generator emits CommonJS into src/, where Vite applies no CJS interop, so the
+// worker dies with a bare ReferenceError while workerd evaluates it as ESM.
 generator client {
-  provider   = "prisma-client-js"
-  output     = "../src/generated/prisma"
-  // Workers runtime needs the wasm-free engine.
-  engineType = "client"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  runtime      = "cloudflare"
+  moduleFormat = "esm"
 }
 
 // Prisma 7 removed the schema-level `url` field. Runtime uses the adapter
