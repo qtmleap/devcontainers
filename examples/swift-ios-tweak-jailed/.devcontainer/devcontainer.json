@@ -53,7 +53,9 @@
     },
     "ghcr.io/dhoeric/features/act:1": {},
     "ghcr.io/devcontainers-community/features/direnv:1": {},
-    "ghcr.io/swift-server-community/swift-devcontainer-features/swift-format:0": {}
+    "ghcr.io/swift-server-community/swift-devcontainer-features/swift-format:0": {
+      "version": "603.0.0"
+    }
   },
   "otherPortsAttributes": {
     "onAutoForward": "ignore"
