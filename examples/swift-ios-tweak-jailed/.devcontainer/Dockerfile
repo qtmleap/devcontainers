@@ -24,7 +24,10 @@ RUN \
     # Relay / port forward helpers for jailbroken device sessions.
     socat netcat-openbsd \
     # Mach-O / FAT identification.
-    file llvm
+    file llvm \
+    # Host Swift toolchain runtime / link-time dependencies (swift.org Ubuntu 24.04 list).
+    libcurl4-openssl-dev libedit2 libsqlite3-0 libpython3-dev \
+    libstdc++-13-dev libncurses-dev zlib1g-dev pkg-config tzdata
 
 # ── jadx (Android APK → Java decompiler) ──
 RUN \
@@ -89,12 +92,21 @@ RUN \
     tar xJf "$SWIFT_TC_FILE" -C ${THEOS}/toolchain
 
 # ── Host Swift (for SPM builds that run on the container itself) ──
+# Independent of ${THEOS}/toolchain above: that one is the 5.8 iOS cross-compile
+# toolchain, this one builds host binaries (swift-format et al.).
 USER root
+ARG HOST_SWIFT_VERSION=6.3.2
 RUN \
     --mount=type=cache,target=/var/cache/dl,sharing=locked,uid=1000,gid=1000 \
-    ARCH=$(uname -m) && \
-    HOST_SWIFT_FILE=/var/cache/dl/swift-5.8.1-RELEASE-ubuntu22.04-${ARCH}.tar.gz && \
-    { [ -f "$HOST_SWIFT_FILE" ] || curl -fsSL -o "$HOST_SWIFT_FILE" "https://download.swift.org/swift-5.8.1-release/ubuntu2204-${ARCH}/swift-5.8.1-RELEASE/swift-5.8.1-RELEASE-ubuntu22.04-${ARCH}.tar.gz"; } && \
+    # swift.org publishes x86_64 without an arch suffix; aarch64 carries one.
+    case "$(uname -m)" in \
+    aarch64) SWIFT_PLATFORM=ubuntu2404-aarch64; SWIFT_ARCH=-aarch64 ;; \
+    *) SWIFT_PLATFORM=ubuntu2404; SWIFT_ARCH= ;; \
+    esac && \
+    SWIFT_TAG=swift-${HOST_SWIFT_VERSION}-RELEASE && \
+    SWIFT_NAME=${SWIFT_TAG}-ubuntu24.04${SWIFT_ARCH} && \
+    HOST_SWIFT_FILE=/var/cache/dl/${SWIFT_NAME}.tar.gz && \
+    { [ -f "$HOST_SWIFT_FILE" ] || curl -fsSL -o "$HOST_SWIFT_FILE" "https://download.swift.org/swift-${HOST_SWIFT_VERSION}-release/${SWIFT_PLATFORM}/${SWIFT_TAG}/${SWIFT_NAME}.tar.gz"; } && \
     tar xzf "$HOST_SWIFT_FILE" --strip-components=2 -C /usr
 USER vscode
 
