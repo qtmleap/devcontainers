@@ -15,6 +15,7 @@
     "deploy": "bun --filter './workers/*' run deploy",
     "typecheck": "bun run --filter '@app/*' typecheck",
     "lint": "bunx --bun biome check",
+    "browser:install": "playwright install chromium",
     "format": "bunx --bun biome check --write",
     "test": "bun test",
     "db:generate": "bun run --cwd workers/db generate",
@@ -28,6 +29,7 @@
     "@cloudflare/workers-types": "^4",
     "@types/bun": "^1",
     "@types/node": "^26",
+    "playwright": "^1.62.1",
     "typescript": "^7",
     "wrangler": "^4"
   }
