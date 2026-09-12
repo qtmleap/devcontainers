@@ -306,6 +306,34 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.example }}
           cache-to: type=gha,mode=max,scope=${{ matrix.example }}
 
+  # The docker-build job above builds each example's *production* Dockerfile;
+  # nothing built the .devcontainer ones, so a devcontainer Dockerfile could
+  # break without CI noticing — as happened when the swift:6.0-noble base
+  # gained a default `ubuntu` account on uid 1000 and `groupadd --gid 1000`
+  # started failing. Build the swift devcontainer images here to catch it.
+  # The swift-ios-tweak images are excluded: Theos + SDKs + Ghidra take 20+
+  # minutes, and those examples carry their own devcontainer-build workflow.
+  devcontainer-build:
+    name: Devcontainer build ${{ matrix.example }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example:
+          - swift
+          - swift-ios-app
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - name: Build devcontainer image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: examples/${{ matrix.example }}/.devcontainer
+          push: false
+          tags: verify/${{ matrix.example }}-devcontainer:local
+          cache-from: type=gha,scope=${{ matrix.example }}-devcontainer
+          cache-to: type=gha,mode=max,scope=${{ matrix.example }}-devcontainer
+
   wrangler-dryrun:
     name: Wrangler dry-run ${{ matrix.example }}
     runs-on: [self-hosted, docker]

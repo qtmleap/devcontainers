@@ -1,0 +1,67 @@
+name: Integration
+on:
+  push:
+    branches-ignore:
+      - main
+      - master
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Only the SDK-independent checks run here. Compiling an Xcode project needs a
+# macOS runner with Xcode installed; add that job per project, e.g.
+#
+#   build:
+#     runs-on: macos-15
+#     steps:
+#       - uses: actions/checkout@v5
+#       - run: xcodebuild -scheme <Scheme> -destination 'platform=iOS Simulator,name=iPhone 16' build
+#
+# Do not add it to this template: the scheme name and destination are project-specific.
+jobs:
+  commitlint:
+    name: Commit Lint
+    runs-on: ubuntu-latest
+    if: github.event.action != 'closed' || github.event.pull_request.merged != true
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Cache Bun install
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock', '**/package.json') }}
+          restore-keys: |
+            bun-${{ runner.os }}-
+      - name: Install commitlint
+        run: |
+          bun install conventional-changelog-conventionalcommits
+          bun install @commitlint/config-conventional@latest
+          bun install commitlint@latest
+      - name: Validate PR commits
+        if: github.event_name == 'pull_request'
+        run: |
+          bunx commitlint \
+            --from ${{ github.event.pull_request.head.sha }}~${{ github.event.pull_request.commits }} \
+            --to ${{ github.event.pull_request.head.sha }} \
+            --verbose
+      - name: Validate last commit
+        if: github.event_name == 'push'
+        run: bunx commitlint --last --verbose
+
+  format:
+    name: swift-format
+    runs-on: ubuntu-latest
+    container: swift:6.0-noble
+    steps:
+      - uses: actions/checkout@v5
+      # swift-format parses with SwiftSyntax and needs no SDK, so it is the one
+      # Swift check that is meaningful on linux.
+      - name: swift-format lint
+        run: swift-format lint --recursive --strict .

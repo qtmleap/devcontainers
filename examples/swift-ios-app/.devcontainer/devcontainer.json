@@ -1,0 +1,62 @@
+{
+  "name": "Swift (iOS app)",
+  "dockerComposeFile": ["compose.yaml"],
+  "service": "app",
+  "workspaceFolder": "/home/vscode/app",
+  "shutdownAction": "stopCompose",
+  "remoteUser": "vscode",
+  "remoteEnv": {
+    "ANTHROPIC_BASE_URL": "${localEnv:ANTHROPIC_BASE_URL}",
+    "ANTHROPIC_AUTH_TOKEN": "${localEnv:ANTHROPIC_AUTH_TOKEN}",
+    "WAKATIME_API_KEY": "${localEnv:WAKATIME_API_KEY}",
+    "OPENAI_API_KEY": "${localEnv:OPENAI_API_KEY}",
+    "AGENTS_SESSION": "${localWorkspaceFolderBasename}"
+  },
+  "containerEnv": {
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
+    "CODEX_HOME": "/home/vscode/.codex"
+  },
+  "mounts": [
+    "source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind,consistency=cached,readonly",
+    "source=${localEnv:HOME}/.claude,target=/home/vscode/.claude,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.codex,target=/home/vscode/.codex,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached,readonly",
+    "source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,type=bind,consistency=cached,readonly"
+  ],
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "configureZshAsDefaultShell": true
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/stu-bell/devcontainer-features/claude-code:0": {
+      "version": "latest"
+    },
+    "ghcr.io/thamaji/devcontainer-features/codex-cli:1": {
+      "VERSION": "latest"
+    },
+    "ghcr.io/jsburckhardt/devcontainer-features/tmux:2": {},
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "moby": false,
+      "dockerDashComposeVersion": "v2"
+    },
+    "ghcr.io/dhoeric/features/act:1": {},
+    "ghcr.io/devcontainers-community/features/direnv:1": {}
+  },
+  "postAttachCommand": "/bin/sh .devcontainer/postAttachCommand.sh",
+  "postCreateCommand": "/bin/sh .devcontainer/postCreateCommand.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "EditorConfig.EditorConfig",
+        "PKief.material-icon-theme",
+        "WakaTime.vscode-wakatime",
+        "antfu.file-nesting",
+        "bierner.github-markdown-preview",
+        "bierner.markdown-preview-github-styles",
+        "redhat.vscode-yaml",
+        "swiftlang.swift-vscode",
+        "tamasfe.even-better-toml"
+      ]
+    }
+  }
+}

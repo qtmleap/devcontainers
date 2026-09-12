@@ -25,11 +25,21 @@ Pick exactly one example from `examples/` based on the target stack:
 | A Python project requiring GPU / CUDA | `examples/python-cuda/` |
 | A Rust project | `examples/rust/` |
 | A Swift server / library on Linux | `examples/swift/` |
+| A native iOS / macOS app built from an Xcode project | `examples/swift-ios-app/` |
 | iOS tweak / reverse engineering with Theos, Ghidra, ipsw, jadx | `examples/swift-ios-tweak/` |
 
 If none of the above fit, **do not invent a new example inline in the target
 project**. Prefer copying the closest match and modifying it, or ask the human
 whether to add a new entry under `examples/`.
+
+
+`examples/swift-ios-app/` is the one template whose container **cannot build the
+project**. Xcode, the Apple SDKs and the simulators do not exist on linux, so
+`import SwiftUI` / `import UIKit` never resolve there and sourcekit-lsp reports
+them as errors. The container covers `swift-format`, the agent tooling and any
+SDK-independent code; compiling, testing and signing stay on a Mac. Its
+`integration.yaml` therefore ships lint only, with the macOS build job left as a
+documented per-project addition.
 
 ---
 
