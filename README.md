@@ -73,7 +73,8 @@ for downstream users.
 | `.gitattributes` | Force LF on all text files. Marks lockfiles and `*.gen.ts` as `linguist-generated`. |
 | `.commitlintrc.yaml` | Conventional Commits. Enforces `type-enum` (feat/fix/docs/…) and `header-max-length: 128`. |
 | `.actrc` | Config for `act` (local GitHub Actions runner). Assumes Apple Silicon (`linux/arm64`) — flip if the host is amd64. |
-| `.vscode/settings.json` | Universal VS Code baseline: `formatOnSave`, `files.exclude`, `search.exclude`, file nesting patterns, JSON/YAML formatters. Does **not** define stack-specific formatters. |
+| `.vscode/settings.json` | Universal VS Code baseline: `formatOnSave`, `files.exclude`, `search.exclude`, file nesting patterns, JSON/YAML formatters, `terminal.integrated.defaultLocation`. Does **not** define stack-specific formatters. |
+| `.vscode/tasks.json` | Runs `.devcontainer/start-agents.sh` on `folderOpen`. Guarded, so a project without that script opens cleanly. |
 
 Root `.gitignore` and `LICENSE` and `README.md` are for maintaining this
 repository itself and are not copied into downstream projects.
@@ -91,7 +92,10 @@ examples/<name>/
 │   ├── Dockerfile
 │   ├── compose.yaml           # if using Docker Compose
 │   ├── postCreateCommand.sh   # optional
-│   └── postAttachCommand.sh   # optional
+│   ├── postAttachCommand.sh   # optional
+│   ├── start-agents.sh        # tmux launcher: orchestrator + implementer
+│   ├── orchestrator.md        # system prompt appended to the orchestrator session
+│   └── implementer.md         # system prompt appended to the implementer session
 ├── .gitignore                 # stack-specific ignores (node_modules, target, .venv, etc.)
 ├── .vscode/
 │   └── settings.json          # stack-specific formatters ONLY (merge with root at copy time)
@@ -143,7 +147,135 @@ If a project prefers not to enforce these rules, drop the `plugins` array in
 
 ---
 
-## 5. Design constraints
+## 5. Coding agents (Claude Code + Codex)
+
+Every example ships both agents and a tmux launcher that runs two Claude Code
+sessions and one Codex session side by side. Opening the folder drops you
+straight into that session:
+
+```
+┌──────────────┬──────────────┐
+│              │ implementer  │
+│ orchestrator ├──────────────┤
+│              │ codex        │
+└──────────────┴──────────────┘
+  --name orchestrator   --name implementer
+  talks to you,         implements what it
+  splits the work,      is told
+  verifies the result
+                        codex
+                        reviews the design,
+                        second opinions
+```
+
+You talk to the **orchestrator**. It gets `orchestrator.md` appended to its
+system prompt, which tells it to delegate implementation to `implementer`,
+review the result with Codex, and verify everything itself.
+
+- The two Claude Code sessions talk through Claude Code's own cross-session
+  messaging (`ListAgents` / `SendMessage`, addressed by the `--name` given at
+  launch) — never through tmux. They are separate sessions rather than
+  subagents so that both agents' work stays visible on screen.
+- Codex has no cross-session messaging, so it gets a pane of its own and the
+  orchestrator pastes into it with `ask-agent.sh`. Codex sends no completion
+  signal, so `ask-agent.sh -w SEC` waits and then prints the pane; `--read`
+  re-reads it later.
+
+The container cannot reach anything outside the workspace, so every pane runs
+with its approval checks disabled by default — `--dangerously-skip-permissions`
+for the Claude sessions, `--dangerously-bypass-approvals-and-sandbox` for Codex.
+Override `CLAUDE_ARGS` / `CODEX_ARGS` if you run the launcher on a host.
+
+### What each example provides
+
+| Piece | Where | Purpose |
+| --- | --- | --- |
+| Claude Code | `features` → `stu-bell/devcontainer-features/claude-code` | Installs `claude`. |
+| Codex CLI | `features` → `thamaji/devcontainer-features/codex-cli` | Downloads the statically linked musl binary from `openai/codex` releases. Pin with the `VERSION` option. Runs in the bottom right pane. |
+| tmux | `features` → `jsburckhardt/devcontainer-features/tmux` | Builds tmux from the GitHub release tarball. Pin with the `version` option. |
+| `start-agents.sh` | `.devcontainer/` | Creates (or attaches to) the three-pane tmux session. Each pane carries a `@role` tmux option. |
+| `ask-agent.sh` | `.devcontainer/` | Pastes a prompt into a pane by `@role` and reads the answer back. Used for `codex`. |
+| `agent-session.sh` | `.devcontainer/` | Sourced by both scripts so they always derive the same session name. |
+| `orchestrator.md` / `implementer.md` | `.devcontainer/` | Appended to each Claude session's system prompt via `--append-system-prompt`. Edit them to change how work is split and reported. |
+
+### Credentials
+
+Both agents authenticate from the host's config, bind-mounted read-write so a
+login inside the container persists on the host:
+
+```
+${localEnv:HOME}/.claude  →  /home/vscode/.claude   (CLAUDE_CONFIG_DIR)
+${localEnv:HOME}/.codex   →  /home/vscode/.codex    (CODEX_HOME)
+```
+
+The codex feature was chosen partly because it declares no mounts or lifecycle
+hooks of its own, so the `~/.codex` mount above stays under `devcontainer.json`'s
+control. Some other codex features bind-mount `~/.codex` themselves and replace
+`~/.codex` with a symlink on create, which conflicts with this mount.
+
+`ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN` and `OPENAI_API_KEY` are forwarded
+through `remoteEnv` for setups that use API keys instead of an interactive login.
+
+### Auto-start
+
+`postAttachCommand.sh` builds the session detached, so all three panes are
+already running before anything attaches. `.vscode/tasks.json` then opens the
+session on `folderOpen`:
+
+```jsonc
+"runOptions": { "runOn": "folderOpen" }
+```
+
+It lands in the editor area rather than the panel, because the root
+`.vscode/settings.json` sets `"terminal.integrated.defaultLocation": "editor"`.
+VS Code has no per-task property for this
+([microsoft/vscode#212070](https://github.com/microsoft/vscode/issues/212070)),
+so it is a workspace-wide setting and every terminal in the workspace follows
+it. Move a single one back with **Terminal: Move Terminal into Panel**.
+
+**VS Code blocks automatic tasks until you allow them, once per folder:**
+Command Palette → **Tasks: Manage Automatic Tasks** → **Allow Automatic Tasks
+in Folder**, then reload the window. To skip that click in every repository,
+put this in your own user `settings.json`:
+
+```jsonc
+"task.allowAutomaticTasks": "on"
+```
+
+It cannot go in `.vscode/settings.json` or in `devcontainer.json` — the setting
+is application-scoped, so VS Code only reads it from user settings. Note that
+turning it on lets *any* folder you open run its `folderOpen` task.
+
+If `tmux` or `claude` is missing, the script warns and falls back to a plain
+login shell — a broken agent setup must never make the terminal unusable. A
+missing `codex` only costs the third pane.
+
+### Escape hatches
+
+| Variable | Effect |
+| --- | --- |
+| `AGENTS_TMUX=0` | Skip tmux entirely; use a plain shell. |
+| `AGENTS_SESSION` | tmux session name. `devcontainer.json` sets it to `${localWorkspaceFolderBasename}`; without it the name comes from the workspace directory. Non-alphanumeric characters collapse to `-`, because tmux parses `.` and `:` in target names. |
+| `CLAUDE_ARGS` | Arguments for both Claude panes (default `--dangerously-skip-permissions`; set to empty to disable). |
+| `CODEX_ARGS` | Arguments for the codex pane (default `--dangerously-bypass-approvals-and-sandbox`; set to empty to disable). |
+| `ORCHESTRATOR_ARGS` / `IMPLEMENTER_ARGS` | Extra arguments for that pane only. |
+| `ORCHESTRATOR_MODEL` / `IMPLEMENTER_MODEL` / `CODEX_MODEL` | `--model` for that pane (default: whatever the CLI picks). |
+
+Talking to a pane by hand:
+
+```bash
+./.devcontainer/ask-agent.sh codex "What breaks in this design?" -w 120
+./.devcontainer/ask-agent.sh codex -f /tmp/review.md -w 180
+./.devcontainer/ask-agent.sh codex --read
+```
+
+> The permissive default exists because these containers are the sandbox. If
+> you copy `start-agents.sh` somewhere that is not isolated, set `CLAUDE_ARGS`
+> and `CODEX_ARGS` explicitly before relying on it.
+
+---
+
+## 6. Design constraints
 
 Rules for any agent modifying this repository:
 
@@ -179,9 +311,21 @@ Rules for any agent modifying this repository:
 7. **`.claude/`, `.mcp.json` and similar agent-side config are optional and
    per-example.** Do not add them to every example by default.
 
+8. **`start-agents.sh`, `ask-agent.sh`, `agent-session.sh`, `orchestrator.md`
+   and `implementer.md` are duplicated into every example on purpose.** They
+   are byte-identical across all of them, which would normally argue for the
+   root per constraint 2 — but they are loaded from `.devcontainer/` at
+   container attach time, so they must travel with the example when that
+   directory is copied. Constraint 1 wins. Edit them in one example, then
+   propagate to the rest.
+
+   `.vscode/tasks.json` is the opposite case and lives at the root: it is what
+   *starts* the launcher, it is stack-agnostic, and it is guarded so that a
+   project without `.devcontainer/start-agents.sh` still opens cleanly.
+
 ---
 
-## 6. What NOT to do
+## 7. What NOT to do
 
 - Do **not** run `bun install`, `uv sync`, `cargo build`, etc. inside this
   repository. `examples/*/` are inert templates; they do not have runnable

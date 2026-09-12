@@ -1,8 +1,6 @@
 {
   "name": "Python CUDA (uv)",
-  "dockerComposeFile": [
-    "compose.yaml"
-  ],
+  "dockerComposeFile": ["compose.yaml"],
   "service": "app",
   "workspaceFolder": "/home/vscode/app",
   "shutdownAction": "stopCompose",
@@ -13,18 +11,22 @@
     "HF_TOKEN": "${localEnv:HF_TOKEN}",
     "WANDB_API_KEY": "${localEnv:WANDB_API_KEY}",
     "WANDB_BASE_URL": "${localEnv:WANDB_BASE_URL}",
-    "WAKATIME_API_KEY": "${localEnv:WAKATIME_API_KEY}"
+    "WAKATIME_API_KEY": "${localEnv:WAKATIME_API_KEY}",
+    "OPENAI_API_KEY": "${localEnv:OPENAI_API_KEY}",
+    "AGENTS_SESSION": "${localWorkspaceFolderBasename}"
   },
   "containerEnv": {
     "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
     "UV_LINK_MODE": "copy",
     "UV_PROJECT_ENVIRONMENT": "/home/vscode/app/.venv",
     "VIRTUAL_ENV_DISABLE_PROMPT": "1",
-    "HF_XET_HIGH_PERFORMANCE": "1"
+    "HF_XET_HIGH_PERFORMANCE": "1",
+    "CODEX_HOME": "/home/vscode/.codex"
   },
   "mounts": [
     "source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind,consistency=cached,readonly",
     "source=${localEnv:HOME}/.claude,target=/home/vscode/.claude,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.codex,target=/home/vscode/.codex,type=bind,consistency=cached",
     "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached,readonly",
     "source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,type=bind,consistency=cached,readonly"
   ],
@@ -39,6 +41,10 @@
     "ghcr.io/stu-bell/devcontainer-features/claude-code:0": {
       "version": "latest"
     },
+    "ghcr.io/thamaji/devcontainer-features/codex-cli:1": {
+      "VERSION": "latest"
+    },
+    "ghcr.io/jsburckhardt/devcontainer-features/tmux:2": {},
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
       "moby": false,
       "dockerDashComposeVersion": "v2"
@@ -66,8 +72,7 @@
         "ms-toolsai.jupyter-keymap",
         "redhat.vscode-yaml",
         "tamasfe.even-better-toml"
-      ],
-      "settings": {}
+      ]
     }
   }
 }
