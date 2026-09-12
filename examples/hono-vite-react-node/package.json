@@ -10,6 +10,7 @@
     "start": "bun dist/index.js",
     "typecheck": "tsc --noEmit",
     "lint": "bunx --bun biome check",
+    "browser:install": "playwright install chromium",
     "format": "bunx --bun biome check --write",
     "test": "bun test"
   },
@@ -32,6 +33,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react-swc": "^4",
+    "playwright": "^1.62.1",
     "typescript": "^7",
     "vite": "^8"
   }
