@@ -227,8 +227,28 @@ hooks of its own, so the `~/.codex` mount above stays under `devcontainer.json`'
 control. Some other codex features bind-mount `~/.codex` themselves and replace
 `~/.codex` with a symlink on create, which conflicts with this mount.
 
-`ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN` and `OPENAI_API_KEY` are forwarded
-through `remoteEnv` for setups that use API keys instead of an interactive login.
+`ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, `OPENAI_API_KEY` and
+`OPENAI_BASE_URL` are forwarded through `remoteEnv` for setups that use API keys
+instead of an interactive login. Claude Code reads its key from the environment
+directly. Codex does not, and needs three more things, all handled by
+`postAttachCommand.sh`:
+
+- **Codex reads credentials from `auth.json`, not from `OPENAI_API_KEY`**. With
+  the variable alone it still stops at the interactive sign-in screen, so
+  `postAttachCommand.sh` runs `codex login --with-api-key` once, piping the key
+  over stdin so it never shows up in `ps`. It checks `codex login status` first
+  and does nothing when a login already exists.
+- **Codex ignores `OPENAI_BASE_URL`**. A compatible endpoint has to be declared
+  as a provider, and a project-local `.codex/config.toml` will not do: Codex
+  reports `model_provider` and `model_providers` as unsupported keys there and
+  falls back to `api.openai.com`. So `postAttachCommand.sh` writes the provider
+  into the user-level `$CODEX_HOME/config.toml` instead, only when
+  `OPENAI_BASE_URL` is set, and skips the write when it is already there.
+  Top-level keys go in ahead of the first table header, or TOML reads them as
+  members of the existing `[projects.*]` table.
+- **The endpoint may not serve Codex's default model**. Set `CODEX_MODEL` on the
+  host; it reaches the container through `remoteEnv`/`containerEnv`, and
+  `start-agents.sh` passes it on as `--model`. Leave it unset for the default.
 
 ### Auto-start
 

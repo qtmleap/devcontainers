@@ -13,6 +13,7 @@
     "WANDB_BASE_URL": "${localEnv:WANDB_BASE_URL}",
     "WAKATIME_API_KEY": "${localEnv:WAKATIME_API_KEY}",
     "OPENAI_API_KEY": "${localEnv:OPENAI_API_KEY}",
+    "OPENAI_BASE_URL": "${localEnv:OPENAI_BASE_URL}",
     "AGENTS_SESSION": "${localWorkspaceFolderBasename}"
   },
   "containerEnv": {
@@ -21,7 +22,8 @@
     "UV_PROJECT_ENVIRONMENT": "/home/vscode/app/.venv",
     "VIRTUAL_ENV_DISABLE_PROMPT": "1",
     "HF_XET_HIGH_PERFORMANCE": "1",
-    "CODEX_HOME": "/home/vscode/.codex"
+    "CODEX_HOME": "/home/vscode/.codex",
+    "CODEX_MODEL": "${localEnv:CODEX_MODEL}"
   },
   "mounts": [
     "source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind,consistency=cached,readonly",
