@@ -310,7 +310,8 @@ jobs:
   # nothing built the .devcontainer ones, so a devcontainer Dockerfile could
   # break without CI noticing — as happened when the swift:6.0-noble base
   # gained a default `ubuntu` account on uid 1000 and `groupadd --gid 1000`
-  # started failing. Build the swift devcontainer images here to catch it.
+  # started failing, and again when nvidia/cuda:*-ubuntu24.04 did the same.
+  # Build every devcontainer image that creates its own user here to catch it.
   # The swift-ios-tweak images are excluded: Theos + SDKs + Ghidra take 20+
   # minutes, and those examples carry their own devcontainer-build workflow.
   devcontainer-build:
@@ -320,6 +321,7 @@ jobs:
       fail-fast: false
       matrix:
         example:
+          - python-cuda
           - swift
           - swift-ios-app
     steps:
