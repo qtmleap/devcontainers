@@ -84,7 +84,7 @@ for downstream users.
 | `.commitlintrc.yaml` | Conventional Commits. Enforces `type-enum` (feat/fix/docs/…) and `header-max-length: 128`. |
 | `.actrc` | Config for `act` (local GitHub Actions runner). Assumes Apple Silicon (`linux/arm64`) — flip if the host is amd64. |
 | `.vscode/settings.json` | Universal VS Code baseline: `formatOnSave`, `files.exclude`, `search.exclude`, file nesting patterns, JSON/YAML formatters, `terminal.integrated.defaultLocation`. Does **not** define stack-specific formatters. |
-| `.vscode/tasks.json` | Runs `.devcontainer/start-agents.sh` on `folderOpen`. Guarded, so a project without that script opens cleanly. |
+| `.vscode/tasks.json` | Runs `scripts/agents/start-agents.sh` on `folderOpen`. Guarded, so a project without that script opens cleanly. |
 
 Root `.gitignore` and `LICENSE` and `README.md` are for maintaining this
 repository itself and are not copied into downstream projects.
@@ -102,10 +102,14 @@ examples/<name>/
 │   ├── Dockerfile
 │   ├── compose.yaml           # if using Docker Compose
 │   ├── postCreateCommand.sh   # optional
-│   ├── postAttachCommand.sh   # optional
-│   ├── start-agents.sh        # tmux launcher: orchestrator + implementer
-│   ├── orchestrator.md        # system prompt appended to the orchestrator session
-│   └── implementer.md         # system prompt appended to the implementer session
+│   └── postAttachCommand.sh   # optional
+├── scripts/
+│   └── agents/
+│       ├── start-agents.sh    # tmux launcher: orchestrator + implementer + codex
+│       ├── ask-agent.sh       # paste a prompt into the codex pane, read it back
+│       ├── agent-session.sh   # sourced by both: the session name
+│       ├── orchestrator.md    # system prompt appended to the orchestrator session
+│       └── implementer.md     # system prompt appended to the implementer session
 ├── .gitignore                 # stack-specific ignores (node_modules, target, .venv, etc.)
 ├── .vscode/
 │   └── settings.json          # stack-specific formatters ONLY (merge with root at copy time)
@@ -203,10 +207,10 @@ Override `CLAUDE_ARGS` / `CODEX_ARGS` if you run the launcher on a host.
 | Claude Code | `features` → `stu-bell/devcontainer-features/claude-code` | Installs `claude`. |
 | Codex CLI | `features` → `thamaji/devcontainer-features/codex-cli` | Downloads the statically linked musl binary from `openai/codex` releases. Pin with the `VERSION` option. Runs in the bottom right pane. |
 | tmux | `features` → `jsburckhardt/devcontainer-features/tmux` | Builds tmux from the GitHub release tarball. Pin with the `version` option. |
-| `start-agents.sh` | `.devcontainer/` | Creates (or attaches to) the three-pane tmux session. Each pane carries a `@role` tmux option. |
-| `ask-agent.sh` | `.devcontainer/` | Pastes a prompt into a pane by `@role` and reads the answer back. Used for `codex`. |
-| `agent-session.sh` | `.devcontainer/` | Sourced by both scripts so they always derive the same session name. |
-| `orchestrator.md` / `implementer.md` | `.devcontainer/` | Appended to each Claude session's system prompt via `--append-system-prompt`. Edit them to change how work is split and reported. |
+| `start-agents.sh` | `scripts/agents/` | Creates (or attaches to) the three-pane tmux session. Each pane carries a `@role` tmux option. |
+| `ask-agent.sh` | `scripts/agents/` | Pastes a prompt into a pane by `@role` and reads the answer back. Used for `codex`. |
+| `agent-session.sh` | `scripts/agents/` | Sourced by both scripts so they always derive the same session name. |
+| `orchestrator.md` / `implementer.md` | `scripts/agents/` | Appended to each Claude session's system prompt via `--append-system-prompt`. Edit them to change how work is split and reported. |
 
 ### Credentials
 
@@ -274,9 +278,9 @@ missing `codex` only costs the third pane.
 Talking to a pane by hand:
 
 ```bash
-./.devcontainer/ask-agent.sh codex "What breaks in this design?" -w 120
-./.devcontainer/ask-agent.sh codex -f /tmp/review.md -w 180
-./.devcontainer/ask-agent.sh codex --read
+./scripts/agents/ask-agent.sh codex "What breaks in this design?" -w 120
+./scripts/agents/ask-agent.sh codex -f /tmp/review.md -w 180
+./scripts/agents/ask-agent.sh codex --read
 ```
 
 > The permissive default exists because these containers are the sandbox. If
@@ -322,16 +326,22 @@ Rules for any agent modifying this repository:
    per-example.** Do not add them to every example by default.
 
 8. **`start-agents.sh`, `ask-agent.sh`, `agent-session.sh`, `orchestrator.md`
-   and `implementer.md` are duplicated into every example on purpose.** They
-   are byte-identical across all of them, which would normally argue for the
-   root per constraint 2 — but they are loaded from `.devcontainer/` at
-   container attach time, so they must travel with the example when that
-   directory is copied. Constraint 1 wins. Edit them in one example, then
-   propagate to the rest.
+   and `implementer.md` live in `scripts/agents/` and are duplicated into every
+   example on purpose.** They are byte-identical across all of them, which would
+   normally argue for the root per constraint 2 — but they must travel with the
+   example when it is copied into a target project. Constraint 1 wins. Edit them
+   in one example, then propagate to the rest.
+
+   They sit under `scripts/` rather than `.devcontainer/` because they are not
+   container build or lifecycle configuration: they are commands a human or an
+   agent runs from the workspace, like everything else in `scripts/`. Nothing
+   loads them at image build time — `postAttachCommand.sh` and
+   `.vscode/tasks.json` invoke them by path after the container is up, and the
+   bootstrap copies the whole example directory, so the move costs nothing.
 
    `.vscode/tasks.json` is the opposite case and lives at the root: it is what
    *starts* the launcher, it is stack-agnostic, and it is guarded so that a
-   project without `.devcontainer/start-agents.sh` still opens cleanly.
+   project without `scripts/agents/start-agents.sh` still opens cleanly.
 
 ---
 

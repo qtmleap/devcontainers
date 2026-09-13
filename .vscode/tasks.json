@@ -10,8 +10,8 @@
       // settings.json (microsoft/vscode#212070).
       //
       // Guarded because this file is copied into every project: repositories without
-      // .devcontainer/start-agents.sh must not get a failing task on open.
-      "command": "[ -x .devcontainer/start-agents.sh ] && exec .devcontainer/start-agents.sh || true",
+      // scripts/agents/start-agents.sh must not get a failing task on open.
+      "command": "[ -x scripts/agents/start-agents.sh ] && exec scripts/agents/start-agents.sh || true",
       "options": {
         "cwd": "${workspaceFolder}"
       },

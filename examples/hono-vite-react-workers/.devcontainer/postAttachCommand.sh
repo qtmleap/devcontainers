@@ -10,4 +10,4 @@ git branch --merged | egrep -v '\*|develop|main|master' | xargs -r git branch -d
 
 # Build the agent session up front, so the panes are already running by the time
 # the folderOpen task attaches to it.
-[ -x .devcontainer/start-agents.sh ] && .devcontainer/start-agents.sh --no-attach || true
+[ -x scripts/agents/start-agents.sh ] && scripts/agents/start-agents.sh --no-attach || true
