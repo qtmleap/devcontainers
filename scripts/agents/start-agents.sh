@@ -3,11 +3,14 @@
 # Bring up orchestrator / implementer / codex side by side in one tmux session.
 #
 #   ┌──────────────┬──────────────┐
-#   │              │ implementer  │  Claude Code, does the implementation
+#   │              │ claude code  │  Claude Code, does the implementation
 #   │ orchestrator ├──────────────┤
 #   │              │ codex        │  Codex CLI, design review and second opinions
 #   └──────────────┴──────────────┘
 #     Claude Code, runs the show
+#
+# The borders show the tool; the addresses are the roles. The top right pane is
+# labelled `claude code` but is still `implementer` to --name and ask-agent.sh.
 #
 # orchestrator and implementer talk through Claude Code's own cross-session
 # messaging (ListAgents / SendMessage); the name given to --name is the address.
@@ -108,15 +111,29 @@ if ! tmux has-session -t "=$SESSION" 2>/dev/null; then
 
   # Keep the role in a pane option: the TUIs rewrite pane_title, so the title is
   # not a reliable way to find a pane. ask-agent.sh routes on this @role.
+  #
+  # The border shows @label rather than @role, because the role name answers the
+  # wrong question there: `implementer` is as much a Claude Code session as
+  # `orchestrator` is, and the border is where you look to see which tool you are
+  # typing at. Display only — nothing routes on @label.
+  pane_label() {
+    case "$1" in
+      implementer) printf 'claude code' ;;
+      *) printf '%s' "$1" ;;
+    esac
+  }
+
   i=0
   for role in "${ROLES[@]}"; do
+    label="$(pane_label "$role")"
     tmux set-option -p -t "$SESSION:dev.$i" @role "$role"
-    tmux select-pane -t "$SESSION:dev.$i" -T "$role"
+    tmux set-option -p -t "$SESSION:dev.$i" @label "$label"
+    tmux select-pane -t "$SESSION:dev.$i" -T "$label"
     i=$((i + 1))
   done
 
   tmux set-option -t "$SESSION" -g pane-border-status top
-  tmux set-option -t "$SESSION" -g pane-border-format ' #{@role} '
+  tmux set-option -t "$SESSION" -g pane-border-format ' #{@label} '
   # Deep scrollback so ask-agent.sh can read back a long answer.
   tmux set-option -t "$SESSION" -g history-limit 50000
   tmux set-option -t "$SESSION" -g mouse on

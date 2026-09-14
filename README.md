@@ -226,7 +226,7 @@ that session:
 
 ```
 ┌──────────────┬──────────────┐
-│              │ implementer  │
+│              │ claude code  │
 │ orchestrator ├──────────────┤
 │              │ codex        │
 └──────────────┴──────────────┘
@@ -277,7 +277,7 @@ credentials and daemon that this example is given", and override `CLAUDE_ARGS` /
 | Claude Code | `features` → `stu-bell/devcontainer-features/claude-code` | Installs `claude`. |
 | Codex CLI | `features` → `thamaji/devcontainer-features/codex-cli` | Downloads the statically linked musl binary from `openai/codex` releases. Pin with the `VERSION` option. Runs in the bottom right pane. |
 | tmux | `features` → `jsburckhardt/devcontainer-features/tmux` | Builds tmux from the GitHub release tarball. Pin with the `version` option. |
-| `start-agents.sh` | `scripts/agents/` (repository root, copied by Step 1) | Creates (or attaches to) the three-pane tmux session. Each pane carries a `@role` tmux option. |
+| `start-agents.sh` | `scripts/agents/` (repository root, copied by Step 1) | Creates (or attaches to) the three-pane tmux session. Each pane carries a `@role` tmux option for routing, and a display-only `@label` that the pane border shows. |
 | `ask-agent.sh` | `scripts/agents/` (repository root, copied by Step 1) | Pastes a prompt into a pane by `@role` and reads the answer back. Used for `codex`. |
 | `agent-session.sh` | `scripts/agents/` (repository root, copied by Step 1) | Sourced by both scripts so they always derive the same session name. |
 | `orchestrator.md` / `implementer.md` | `scripts/agents/` (repository root, copied by Step 1) | Appended to each Claude session's system prompt via `--append-system-prompt`. Edit them to change how work is split and reported. |
