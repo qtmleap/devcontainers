@@ -44,6 +44,13 @@
     "ghcr.io/dhoeric/features/act:1": {},
     "ghcr.io/devcontainers-community/features/direnv:1": {}
   },
+  // The codex-cli feature's postCreateCommand ends by deleting itself, but
+  // it sits in a root-owned directory while lifecycle commands run as vscode
+  // — so the `rm` fails, `set -e` aborts it, and the CLI then skips every
+  // remaining user command, including the two below. onCreate runs a phase
+  // earlier than any postCreate, so handing the directory over here lets the
+  // feature clean itself up.
+  "onCreateCommand": "sudo chown \"$(id -un)\" /usr/local/codex-cli 2>/dev/null || true",
   "postAttachCommand": "/bin/sh .devcontainer/postAttachCommand.sh",
   "postCreateCommand": "/bin/sh .devcontainer/postCreateCommand.sh",
   "customizations": {
