@@ -57,6 +57,7 @@ cp -a .editorconfig      "$TARGET/"
 cp -a .gitattributes     "$TARGET/"
 cp -a .commitlintrc.yaml "$TARGET/"
 cp -a .actrc             "$TARGET/"
+cp -a .mcp.json          "$TARGET/"
 cp -a .vscode            "$TARGET/"
 cp -a scripts            "$TARGET/"
 
@@ -138,9 +139,10 @@ for downstream users.
 | `.gitattributes` | Force LF on all text files. Marks lockfiles and `*.gen.ts` as `linguist-generated`. |
 | `.commitlintrc.yaml` | Conventional Commits. Enforces `type-enum` (feat/fix/docs/…) and `header-max-length: 128`. |
 | `.actrc` | Config for `act` (local GitHub Actions runner). Assumes Apple Silicon (`linux/arm64`) — flip if the host is amd64. |
+| `.mcp.json` | Gives every Claude Code seat its own Bun-based Codex MCP process and conversation thread. |
 | `.vscode/settings.json` | Universal VS Code baseline: `formatOnSave`, `files.exclude`, `search.exclude`, file nesting patterns, JSON/YAML formatters, `terminal.integrated.defaultLocation`. Does **not** define stack-specific formatters. |
 | `.vscode/tasks.json` | Runs `scripts/agents/start-agents.sh` on `folderOpen`. Guarded, so a project without that script opens cleanly. |
-| `scripts/agents/` | The agent tooling: five files (`start-agents.sh`, `ask-agent.sh`, `agent-session.sh`, `orchestrator.md`, `implementer.md`) that run two Claude Code sessions plus one Codex session in tmux. Language-agnostic, so it lives here rather than in every example — see §5. |
+| `scripts/agents/` | Three Claude Code role prompts and the launcher, Codex MCP bridge, and local command-palette extension. Language-agnostic, so they live here rather than in every example — see §5. |
 
 Root `.gitignore` and `LICENSE` and `README.md` are for maintaining this
 repository itself and are not copied into downstream projects.
@@ -216,173 +218,101 @@ If a project prefers not to enforce these rules, drop the `plugins` array in
 
 ---
 
-## 5. Coding agents (Claude Code + Codex)
+## 5. Coding agents (three Claude Code seats + Codex MCP)
 
-`scripts/agents/` at the repository root provides a tmux launcher that runs two
-Claude Code sessions and one Codex session side by side, and bootstrap Step 1
-copies it into every project. The agent CLIs themselves arrive as devcontainer
-features, so those stay per-example. Opening the folder drops you straight into
-that session:
+`scripts/agents/` provides a tmux launcher for three visible Claude Code
+sessions. Bootstrap Step 1 copies the launcher, role prompts, local VS Code
+extension and root `.mcp.json` into each target project. The agent CLIs and Bun
+arrive as devcontainer features.
 
 ```
 ┌──────────────┬──────────────┐
-│              │ claude code  │
+│              │ implementer  │
 │ orchestrator ├──────────────┤
-│              │ codex        │
+│              │ reviewer     │
 └──────────────┴──────────────┘
-  --name orchestrator   --name implementer
-  talks to you,         implements what it
-  splits the work,      is told
-  verifies the result
-                        codex
-                        reviews the design,
-                        second opinions
 ```
 
-You talk to the **orchestrator**. It gets `orchestrator.md` appended to its
-system prompt, which tells it to delegate implementation to `implementer`,
-review the result with Codex, and verify everything itself.
+Talk to the **orchestrator**. It is the only user-facing intake, delegates file
+changes to `implementer`, and asks `reviewer` for independent design or change
+review when that is useful. All three use Claude Code cross-session messaging
+(`ListAgents` / `SendMessage`, addressed by their `--name`); tmux is only the
+visible layout and never the messaging transport.
 
-- The two Claude Code sessions talk through Claude Code's own cross-session
-  messaging (`ListAgents` / `SendMessage`, addressed by the `--name` given at
-  launch) — never through tmux. They are separate sessions rather than
-  subagents so that both agents' work stays visible on screen.
-- Codex has no cross-session messaging, so it gets a pane of its own and the
-  orchestrator pastes into it with `ask-agent.sh`. Codex sends no completion
-  signal, so `ask-agent.sh -w SEC` waits and then prints the pane; `--read`
-  re-reads it later.
+Every Claude Code process reads the project `.mcp.json` and starts its own small
+Bun stdio server. The server exposes `codex.ask` and `codex.review`, starts
+`codex exec` only for a tool call, and remembers that seat's Codex thread for
+follow-up calls. The three threads are independent. There is no interactive
+Codex pane, fixed wait, or screen scrape.
 
-Every pane runs with its approval checks disabled by default —
-`--dangerously-skip-permissions` for the Claude sessions,
-`--dangerously-bypass-approvals-and-sandbox` for Codex. That default exists
-because the container is treated as the sandbox, not because it is sealed off:
-it is not. Common to all 13 examples: the host's `~/.claude` and `~/.codex` are
-bind-mounted read-write and its `~/.ssh`, `~/.aws` and `~/.config/gh` read-only;
-`OPENAI_API_KEY` and the `ANTHROPIC_*` pair come through `remoteEnv`; and
-`docker-outside-of-docker` shares the host's Docker socket — that one by itself
-is enough to reach the host.
-
-Individual examples widen it further, so the blast radius is per-example rather
-than uniform: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` reach the four
-Workers examples, `GH_TOKEN` the two `swift-ios-tweak*` ones, and `HF_TOKEN`
-plus `WANDB_API_KEY` only `python-cuda`. The two `swift-ios-tweak*` examples also
-run with `network_mode: host`. So read it as "this container plus the host
-credentials and daemon that this example is given", and override `CLAUDE_ARGS` /
-`CODEX_ARGS` if that is wider than you want.
+The launcher defaults to Sonnet 5 for orchestrator and reviewer and Opus 5 for
+implementer. Override `ORCHESTRATOR_MODEL`, `IMPLEMENTER_MODEL`, or
+`REVIEWER_MODEL` on the host to change that assignment; each example forwards
+those optional values through `containerEnv`. `CODEX_MODEL` remains the model
+passed to each MCP-launched Codex turn.
 
 ### What provides what
 
 | Piece | Where | Purpose |
 | --- | --- | --- |
-| Claude Code | `features` → `stu-bell/devcontainer-features/claude-code` | Installs `claude`. |
-| Codex CLI | `features` → `thamaji/devcontainer-features/codex-cli` | Downloads the statically linked musl binary from `openai/codex` releases. Pin with the `VERSION` option. Runs in the bottom right pane. |
-| tmux | `features` → `jsburckhardt/devcontainer-features/tmux` | Builds tmux from the GitHub release tarball. Pin with the `version` option. |
-| `start-agents.sh` | `scripts/agents/` (repository root, copied by Step 1) | Creates (or attaches to) the three-pane tmux session. Each pane carries a `@role` tmux option for routing, and a display-only `@label` that the pane border shows. |
-| `ask-agent.sh` | `scripts/agents/` (repository root, copied by Step 1) | Pastes a prompt into a pane by `@role` and reads the answer back. Used for `codex`. |
-| `agent-session.sh` | `scripts/agents/` (repository root, copied by Step 1) | Sourced by both scripts so they always derive the same session name. |
-| `orchestrator.md` / `implementer.md` | `scripts/agents/` (repository root, copied by Step 1) | Appended to each Claude session's system prompt via `--append-system-prompt`. Edit them to change how work is split and reported. |
+| Claude Code | `features` → `stu-bell/devcontainer-features/claude-code` | Installs `claude` for all three panes. |
+| Codex CLI | `features` → `thamaji/devcontainer-features/codex-cli` | Installs `codex`, called non-interactively by the MCP server. |
+| Bun | `features` → `shyim/devcontainers-features/bun` | Runs the dependency-free MCP server with automatic dotenv loading disabled. |
+| tmux | `features` → `jsburckhardt/devcontainer-features/tmux` | Hosts the three visible Claude Code panes. |
+| `start-agents.sh` | `scripts/agents/` | Creates, attaches, or restarts the session and stores each role in `@role`. |
+| `codex-mcp.mjs` / `.mcp.json` | root and `scripts/agents/` | Expose per-seat Codex `ask` and `review` tools over stdio. |
+| role prompts | `scripts/agents/*.md` | Define orchestration, implementation, and read-only review responsibilities. |
+| local extension | `scripts/agents/vscode/` | Adds **Agents: Start**, **Restart**, and **Attach** directly to the command palette. |
 
-### Credentials
+### Credentials and MCP approval
 
-Both agents authenticate from the host's config, bind-mounted read-write so a
-login inside the container persists on the host:
+The host's `~/.claude` and `~/.codex` are bind-mounted read-write so logins made
+inside a container persist. The host forwards `ANTHROPIC_BASE_URL`,
+`ANTHROPIC_AUTH_TOKEN`, `OPENAI_API_KEY`, and `OPENAI_BASE_URL` through
+`remoteEnv`. `postAttachCommand.sh` logs Codex in and writes its compatible
+provider configuration when required. Set `CODEX_MODEL` on the host when the
+endpoint does not serve Codex's own default model.
 
-```
-${localEnv:HOME}/.claude  →  /home/vscode/.claude   (CLAUDE_CONFIG_DIR)
-${localEnv:HOME}/.codex   →  /home/vscode/.codex    (CODEX_HOME)
-```
+Claude Code asks for project MCP approval the first time it sees `.mcp.json` in
+a project. Approve `codex` from an interactive Claude Code session; until then
+`claude mcp list` reports it as pending.
 
-The codex feature was chosen partly because it declares no mounts or lifecycle
-hooks of its own, so the `~/.codex` mount above stays under `devcontainer.json`'s
-control. Some other codex features bind-mount `~/.codex` themselves and replace
-`~/.codex` with a symlink on create, which conflicts with this mount.
+### Auto-start and command palette
 
-`ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, `OPENAI_API_KEY` and
-`OPENAI_BASE_URL` are forwarded through `remoteEnv` for setups that use API keys
-instead of an interactive login. Claude Code reads its key from the environment
-directly. Codex does not, and needs three more things, all handled by
-`postAttachCommand.sh`:
+`postAttachCommand.sh` builds the session detached and installs the dependency-
+free local VS Code extension. `.vscode/tasks.json` then attaches on
+`folderOpen`. After the extension version changes, run **Developer: Reload
+Window** once so VS Code loads the updated Start, Restart, and Attach commands.
+VS Code may also require **Tasks: Manage Automatic Tasks** → **Allow Automatic
+Tasks in Folder** once per project.
 
-- **Codex reads credentials from `auth.json`, not from `OPENAI_API_KEY`**. With
-  the variable alone it still stops at the interactive sign-in screen, so
-  `postAttachCommand.sh` runs `codex login --with-api-key` once, piping the key
-  over stdin so it never shows up in `ps`. It checks `codex login status` first
-  and does nothing when a login already exists.
-- **Codex ignores `OPENAI_BASE_URL`**. A compatible endpoint has to be declared
-  as a provider, and a project-local `.codex/config.toml` will not do: Codex
-  reports `model_provider` and `model_providers` as unsupported keys there and
-  falls back to `api.openai.com`. So `postAttachCommand.sh` writes the provider
-  into the user-level `$CODEX_HOME/config.toml` instead, only when
-  `OPENAI_BASE_URL` is set, and skips the write when it is already there.
-  Top-level keys go in ahead of the first table header, or TOML reads them as
-  members of the existing `[projects.*]` table.
-- **The endpoint may not serve Codex's default model**. Set `CODEX_MODEL` on the
-  host; it reaches the container through `remoteEnv`/`containerEnv`, and
-  `start-agents.sh` passes it on as `--model`. Leave it unset for the default.
+**Agents: Restart** uses `tmux respawn-pane -k`, preserving the session and any
+attached terminal while replacing all three Claude processes. It also migrates
+a session made by the old layout: the third `codex` role becomes `reviewer`, and
+the old `claude code` display label becomes `implementer`.
 
-### Auto-start
-
-`postAttachCommand.sh` builds the session detached, so all three panes are
-already running before anything attaches. `.vscode/tasks.json` then opens the
-session on `folderOpen`:
-
-```jsonc
-"runOptions": { "runOn": "folderOpen" }
-```
-
-It lands in the editor area rather than the panel, because the root
-`.vscode/settings.json` sets `"terminal.integrated.defaultLocation": "editor"`.
-That key lives only in the root baseline, which Step 2 overwrites, so this holds
-only in a project where the Step 2b merge was actually done (§2).
-VS Code has no per-task property for this
-([microsoft/vscode#212070](https://github.com/microsoft/vscode/issues/212070)),
-so it is a workspace-wide setting and every terminal in the workspace follows
-it. Move a single one back with **Terminal: Move Terminal into Panel**.
-
-**VS Code blocks automatic tasks until you allow them, once per folder:**
-Command Palette → **Tasks: Manage Automatic Tasks** → **Allow Automatic Tasks
-in Folder**, then reload the window. To skip that click in every repository,
-put this in your own user `settings.json`:
-
-```jsonc
-"task.allowAutomaticTasks": "on"
-```
-
-It cannot go in `.vscode/settings.json` or in `devcontainer.json` — the setting
-is application-scoped, so VS Code only reads it from user settings. Note that
-turning it on lets *any* folder you open run its `folderOpen` task.
-
-If `tmux` or `claude` is missing, the script warns and falls back to a plain
-login shell — a broken agent setup must never make the terminal unusable. A
-missing `codex` only costs the third pane.
-
-A missing `scripts/agents/` is the quieter failure. Both the `folderOpen` task
-and `postAttachCommand.sh` guard on `[ -x scripts/agents/start-agents.sh ]`, so
-when bootstrap Step 1 has not run the launcher is skipped with no warning at all
-and the panes simply never appear (see §2).
+If `tmux` or `claude` is missing, the launcher warns and falls back to a plain
+login shell. A missing agent bundle is quieter because both startup hooks guard
+on `[ -x scripts/agents/start-agents.sh ]`.
 
 ### Escape hatches
 
 | Variable | Effect |
 | --- | --- |
-| `AGENTS_TMUX=0` | Skip tmux entirely; use a plain shell. |
-| `AGENTS_SESSION` | tmux session name. `devcontainer.json` sets it to `${localWorkspaceFolderBasename}`; without it the name comes from the workspace directory. Non-alphanumeric characters collapse to `-`, because tmux parses `.` and `:` in target names. |
-| `CLAUDE_ARGS` | Arguments for both Claude panes (default `--dangerously-skip-permissions`; set to empty to disable). |
-| `CODEX_ARGS` | Arguments for the codex pane (default `--dangerously-bypass-approvals-and-sandbox`; set to empty to disable). |
-| `ORCHESTRATOR_ARGS` / `IMPLEMENTER_ARGS` | Extra arguments for that pane only. |
-| `ORCHESTRATOR_MODEL` / `IMPLEMENTER_MODEL` / `CODEX_MODEL` | `--model` for that pane (default: whatever the CLI picks). |
+| `AGENTS_TMUX=0` | Skip tmux and use a plain shell. |
+| `AGENTS_SESSION` | Override the tmux session name. The devcontainer supplies the host workspace directory name. |
+| `CLAUDE_ARGS` | Arguments for all three Claude panes. Default: `--dangerously-skip-permissions`; export an empty value to disable it. |
+| `ORCHESTRATOR_ARGS` / `IMPLEMENTER_ARGS` / `REVIEWER_ARGS` | Extra arguments for one Claude seat. |
+| `ORCHESTRATOR_MODEL` / `IMPLEMENTER_MODEL` / `REVIEWER_MODEL` | Models for the three seats. Defaults: Sonnet 5 / Opus 5 / Sonnet 5. |
+| `CODEX_MODEL` | Model for MCP-launched Codex turns. Default: whatever Codex selects. |
+| `CODEX_MCP_ARGS` | Arguments shared by `codex exec`, `exec resume`, and `exec review`. Default: `--dangerously-bypass-approvals-and-sandbox`. |
+| `CODEX_MCP_TIMEOUT_MS` | Maximum time for one Codex turn. Default: 600000. |
+| `CODEX_MCP_MAX_CHARS` | Maximum returned answer length. Default: 20000. |
 
-Talking to a pane by hand:
-
-```bash
-./scripts/agents/ask-agent.sh codex "What breaks in this design?" -w 120
-./scripts/agents/ask-agent.sh codex -f /tmp/review.md -w 180
-./scripts/agents/ask-agent.sh codex --read
-```
-
-> The permissive default exists because these containers are the sandbox. If
-> you copy `start-agents.sh` somewhere that is not isolated, set `CLAUDE_ARGS`
-> and `CODEX_ARGS` explicitly before relying on it.
+> The permissive defaults treat the devcontainer as the sandbox, but it still
+> receives host credentials, writable configuration mounts, and usually the
+> host Docker socket. Override `CLAUDE_ARGS` and `CODEX_MCP_ARGS` if that is
+> wider access than the project should have.
 
 ---
 
@@ -424,20 +354,20 @@ Rules for any agent modifying this repository:
    directory as a *starting point for creating new examples* — this is a
    snapshot, not a runtime dependency.
 
-7. **`.claude/`, `.mcp.json` and similar agent-side config are optional and
-   per-example.** Do not add them to every example by default.
+7. **Project-specific `.claude/` configuration is optional and per-example.**
+   The shared `.mcp.json` is the exception: it belongs at the root because all
+   examples use the same Codex bridge, and bootstrap copies it into each target.
 
-8. **`start-agents.sh`, `ask-agent.sh`, `agent-session.sh`, `orchestrator.md`
-   and `implementer.md` live once at the repository root, in `scripts/agents/`.**
-   They are language-agnostic and were byte-identical across all 13 examples, so
-   constraint 2 places them at the root. Edit them in one place; there is nothing
-   to propagate.
+8. **The launcher, MCP bridge, role prompts, and command-palette extension live
+   once at the repository root, in `scripts/agents/`.** They are
+   language-agnostic and shared across all 13 examples, so constraint 2 places
+   them at the root. Edit them in one place; there is nothing to propagate.
 
    The price is the retreat in constraint 1: an example directory alone no longer
    carries them, so bootstrapping needs Step 1 as well as Step 2. That trade is
    deliberate, and it is worth being precise about what was traded. "Maintain a
    single source for these files" is satisfied. "Copy a whole project with one
-   command" is not satisfied today — §2 spends six commands on Step 1 alone —
+   command" is not satisfied today — §2 spends seven commands on Step 1 alone —
    but nothing about this layout prevents it: the copying could be collapsed
    into a single command whenever that is worth doing. "An example directory is
    self-contained" is the requirement that was actually given up, and no

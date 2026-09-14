@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Single source of the tmux session name, so start-agents.sh and ask-agent.sh can
-# never disagree about which session they are talking to.
+# Single source of the tmux session name used by start-agents.sh and any shell
+# that needs to locate the shared agent session.
 #
 # The default is the workspace directory name: no project name is baked into the
 # scripts. devcontainer.json passes the host folder name through AGENTS_SESSION,
