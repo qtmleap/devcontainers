@@ -248,3 +248,6 @@ vite.config.*.timestamp-*
 # === Act (GitHub Actions local runner) ===
 .secrets
 !.secrets.example
+
+# === Playwright (MCP outputDir) ===
+screenshots/

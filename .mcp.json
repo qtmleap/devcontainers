@@ -6,6 +6,14 @@
 				"--no-env-file",
 				"${CLAUDE_PROJECT_DIR:-.}/scripts/agents/codex-mcp.mjs"
 			]
+		},
+		"playwright": {
+			"command": "bunx",
+			"args": [
+				"@playwright/mcp",
+				"--config",
+				"${CLAUDE_PROJECT_DIR:-.}/playwright-mcp.config.json"
+			]
 		}
 	}
 }

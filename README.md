@@ -58,6 +58,7 @@ cp -a .gitattributes     "$TARGET/"
 cp -a .commitlintrc.yaml "$TARGET/"
 cp -a .actrc             "$TARGET/"
 cp -a .mcp.json          "$TARGET/"
+cp -a playwright-mcp.config.json "$TARGET/"
 cp -a .vscode            "$TARGET/"
 cp -a scripts            "$TARGET/"
 
@@ -139,7 +140,8 @@ for downstream users.
 | `.gitattributes` | Force LF on all text files. Marks lockfiles and `*.gen.ts` as `linguist-generated`. |
 | `.commitlintrc.yaml` | Conventional Commits. Enforces `type-enum` (feat/fix/docs/…) and `header-max-length: 128`. |
 | `.actrc` | Config for `act` (local GitHub Actions runner). Assumes Apple Silicon (`linux/arm64`) — flip if the host is amd64. |
-| `.mcp.json` | Gives every Claude Code seat its own Bun-based Codex MCP process and conversation thread. |
+| `.mcp.json` | Gives every Claude Code seat its own Bun-based Codex MCP process and conversation thread, plus the Playwright MCP browser server. |
+| `playwright-mcp.config.json` | Browser settings the Playwright MCP server reads at startup: Chromium, an isolated profile, a 1280×720 viewport at `deviceScaleFactor: 2`, screenshots under `screenshots/`. |
 | `.vscode/settings.json` | Universal VS Code baseline: `formatOnSave`, `files.exclude`, `search.exclude`, file nesting patterns, JSON/YAML formatters, `terminal.integrated.defaultLocation`. Does **not** define stack-specific formatters. |
 | `.vscode/tasks.json` | Runs `scripts/agents/start-agents.sh` on `folderOpen`. Guarded, so a project without that script opens cleanly. |
 | `scripts/agents/` | Three Claude Code role prompts and the launcher, Codex MCP bridge, and local command-palette extension. Language-agnostic, so they live here rather than in every example — see §5. |
@@ -261,6 +263,7 @@ passed to each MCP-launched Codex turn.
 | tmux | `features` → `jsburckhardt/devcontainer-features/tmux` | Hosts the three visible Claude Code panes. |
 | `start-agents.sh` | `scripts/agents/` | Creates, attaches, or restarts the session and stores each role in `@role`. |
 | `codex-mcp.mjs` / `.mcp.json` | root and `scripts/agents/` | Expose per-seat Codex `ask` and `review` tools over stdio. |
+| `@playwright/mcp` / `playwright-mcp.config.json` | `devDependencies` of the browser-capable examples, config at root | Let a seat drive a real browser: navigate, click, read the console, take screenshots. |
 | role prompts | `scripts/agents/*.md` | Define orchestration, implementation, and read-only review responsibilities. |
 | local extension | `scripts/agents/vscode/` | Adds **Agents: Start**, **Restart**, and **Attach** directly to the command palette. |
 
@@ -274,8 +277,15 @@ provider configuration when required. Set `CODEX_MODEL` on the host when the
 endpoint does not serve Codex's own default model.
 
 Claude Code asks for project MCP approval the first time it sees `.mcp.json` in
-a project. Approve `codex` from an interactive Claude Code session; until then
-`claude mcp list` reports it as pending.
+a project. Approve `codex` and `playwright` from an interactive Claude Code
+session; until then `claude mcp list` reports them as pending.
+
+The four browser-capable examples (`hono-vite-react-node`,
+`hono-vite-react-workers`, `hono-vite-react-workers-prisma`, `vinext`) carry
+`playwright` and `@playwright/mcp` in `devDependencies`, so `bunx` runs the
+pinned copy. The root `.mcp.json` reaches every stack, so a Python, Rust or
+Swift project also starts the server and `bunx` fetches it on demand there.
+Drop the `playwright` entry from `.mcp.json` in projects with no browser work.
 
 ### Auto-start and command palette
 

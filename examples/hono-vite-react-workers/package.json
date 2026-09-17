@@ -10,7 +10,6 @@
     "deploy": "vite build && wrangler deploy --keep-vars",
     "typecheck": "tsc --noEmit",
     "lint": "bunx --bun biome check",
-    "browser:install": "playwright install chromium",
     "format": "bunx --bun biome check --write",
     "test": "bun test",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings"
@@ -28,6 +27,7 @@
     "@biomejs/biome": "^2",
     "@cloudflare/vite-plugin": "^1",
     "@cloudflare/workers-types": "^4",
+    "@playwright/mcp": "^0.0.81",
     "@types/bun": "^1",
     "@types/react": "^19",
     "@types/react-dom": "^19",

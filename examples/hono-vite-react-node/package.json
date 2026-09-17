@@ -10,7 +10,6 @@
     "start": "bun dist/index.js",
     "typecheck": "tsc --noEmit",
     "lint": "bunx --bun biome check",
-    "browser:install": "playwright install chromium",
     "format": "bunx --bun biome check --write",
     "test": "bun test"
   },
@@ -28,6 +27,7 @@
     "@biomejs/biome": "^2",
     "@hono/vite-build": "^1",
     "@hono/vite-dev-server": "^0.26",
+    "@playwright/mcp": "^0.0.81",
     "@types/bun": "^1",
     "@types/node": "^26",
     "@types/react": "^19",
