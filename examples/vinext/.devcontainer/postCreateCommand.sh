@@ -21,3 +21,13 @@ if [ -f package.json ]; then
     bun install --ignore-scripts
   fi
 fi
+
+# Playwright MCP drives a real Chromium, and neither the browser nor its system
+# libraries ship in the image, so the first `browser_navigate` fails with
+# `Browser "chromium" is not installed` until both are installed here. The MCP
+# server bundles its own Playwright build and expects a different Chromium
+# revision than the `playwright` devDependency, so the browser has to come from
+# the MCP CLI rather than `playwright install`.
+if [ -f playwright-mcp.config.json ]; then
+  bunx @playwright/mcp install-browser --with-deps chromium
+fi

@@ -283,8 +283,12 @@ session; until then `claude mcp list` reports them as pending.
 The four browser-capable examples (`hono-vite-react-node`,
 `hono-vite-react-workers`, `hono-vite-react-workers-prisma`, `vinext`) carry
 `playwright` and `@playwright/mcp` in `devDependencies`, so `bunx` runs the
-pinned copy. The root `.mcp.json` reaches every stack, so a Python, Rust or
-Swift project also starts the server and `bunx` fetches it on demand there.
+pinned copy. Their `postCreateCommand.sh` also installs Chromium and its system
+libraries, which the image does not carry; without that step the first
+`browser_navigate` returns `Browser "chromium" is not installed`. The root
+`.mcp.json` reaches every stack, so a Python, Rust or Swift project also starts
+the server and `bunx` fetches it on demand there — those need
+`bunx @playwright/mcp install-browser --with-deps chromium` run once by hand.
 Drop the `playwright` entry from `.mcp.json` in projects with no browser work.
 
 ### Auto-start and command palette

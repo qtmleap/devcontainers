@@ -313,7 +313,7 @@ jobs:
   # minutes, and those examples carry their own devcontainer-build workflow.
   devcontainer-build:
     name: Devcontainer build ${{ matrix.example }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, docker]
     strategy:
       fail-fast: false
       matrix:
