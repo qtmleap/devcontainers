@@ -37,7 +37,7 @@ whether to add a new entry under `examples/`.
 `examples/swift-ios-app/` is the one template whose container **cannot build the
 project**. Xcode, the Apple SDKs and the simulators do not exist on linux, so
 `import SwiftUI` / `import UIKit` never resolve there and sourcekit-lsp reports
-them as errors. The container covers `swift-format`, the agent tooling and any
+them as errors. The container covers `swift-format`, the coding agents and any
 SDK-independent code; compiling, testing and signing stay on a Mac. Its
 `integration.yaml` therefore ships lint only, with the macOS build job left as a
 documented per-project addition.
@@ -47,20 +47,17 @@ documented per-project addition.
 ## 2. Bootstrap procedure
 
 Given a target project directory `$TARGET`, run all of the steps below **before
-opening the workspace in VS Code.** Opening it earlier leaves the agents not
-running, with no error and no warning to say so — see the note after the
-commands.
+opening the workspace in VS Code**, so that the container is built once from a
+complete `.devcontainer/` rather than rebuilt after the fact.
 
 ```bash
-# Step 1: copy root shared configuration (this includes the agent tooling)
+# Step 1: copy root shared configuration
 cp -a .editorconfig      "$TARGET/"
 cp -a .gitattributes     "$TARGET/"
 cp -a .commitlintrc.yaml "$TARGET/"
 cp -a .actrc             "$TARGET/"
-cp -a .mcp.json          "$TARGET/"
 cp -a playwright-mcp.config.json "$TARGET/"
 cp -a .vscode            "$TARGET/"
-cp -a scripts            "$TARGET/"
 
 # Step 2: copy the chosen example (use `.` suffix to include dotfiles)
 # This OVERWRITES .vscode/settings.json with the example's stack-specific one,
@@ -81,44 +78,14 @@ git init  # if not already initialized
 git submodule add https://github.com/qtmleap/biome-plugins.git biome-plugins
 ```
 
-**Why finishing first matters.** Two separate things start the agents, and each
-one guards its own call with the same test — `[ -x scripts/agents/start-agents.sh ]`
-— but the commands themselves differ:
-
-```bash
-# .vscode/tasks.json (folderOpen task): attaches to the session
-[ -x scripts/agents/start-agents.sh ] && exec scripts/agents/start-agents.sh || true
-
-# examples/*/.devcontainer/postAttachCommand.sh: builds it detached
-[ -x scripts/agents/start-agents.sh ] && scripts/agents/start-agents.sh --no-attach || true
-```
-
-When that test fails, both simply do nothing: the agents do not start and
-**nothing prints an error or a warning**. The guard exists so that a project
-without the launcher still opens cleanly, which means a half-bootstrapped
-project is indistinguishable from a healthy one at a glance. `-x` tests for an
-executable file, so a `scripts/agents/start-agents.sh` that is present but has
-lost its executable bit fails exactly the same silent way — `cp -a` preserves
-the mode, but an archive round-trip or a `cp` without `-a` may not.
-
-Copying `scripts/` afterwards does not fix it either — neither hook runs again on
-its own, so reload the window (**Developer: Reload Window**) to pick it up. Never
-read "no errors" as "the agents are running"; confirm the tmux panes exist.
-
-`examples/swift-ios-tweak-jailed/` is the one example that also ships a
-`scripts/` directory of its own (`build_ipa.py`, `fetch_vendors.sh`,
-`pre-commit`). `cp -a` merges directories and the two sides share no filenames,
-so the root `scripts/agents/` from Step 1 and that example's build assets from
-Step 2 coexist whichever order the steps run in. Nothing is overwritten.
-
 **Step 2b, in detail.** An example's `.vscode/settings.json` carries only
-stack-specific keys — around ten of them, the `[typescript]` / `[python]` /
+stack-specific keys — ten to twelve of them, the `[typescript]` / `[python]` /
 `[rust]` formatter bindings and similar — while the root baseline installed in
-Step 1 carries 32. Because Step 2 replaces the file rather than merging it, 30
-to 32 of those root keys are lost, depending on the example. One of them is
-`terminal.integrated.defaultLocation`, which no example sets and which §5's
-editor-area terminal depends on, so skipping this step degrades the setup
-quietly rather than loudly.
+Step 1 carries 31. Because Step 2 replaces the file rather than merging it, 29
+to 31 of those root keys are lost, depending on the example. Nothing reports
+this: the editor simply stops trimming whitespace, hiding `node_modules` and
+nesting files, so skipping this step degrades the setup quietly rather than
+loudly.
 
 Merge the two by hand: start from the root baseline and fold the example's keys
 into it. There is deliberately no tooling for this. Both files are JSONC with
@@ -140,11 +107,8 @@ for downstream users.
 | `.gitattributes` | Force LF on all text files. Marks lockfiles and `*.gen.ts` as `linguist-generated`. |
 | `.commitlintrc.yaml` | Conventional Commits. Enforces `type-enum` (feat/fix/docs/…) and `header-max-length: 128`. |
 | `.actrc` | Config for `act` (local GitHub Actions runner). Assumes Apple Silicon (`linux/arm64`) — flip if the host is amd64. |
-| `.mcp.json` | Gives every Claude Code seat its own Bun-based Codex MCP process and conversation thread, plus the Playwright MCP browser server. |
-| `playwright-mcp.config.json` | Browser settings the Playwright MCP server reads at startup: Chromium, an isolated profile, a 1280×720 viewport at `deviceScaleFactor: 2`, screenshots under `screenshots/`. |
-| `.vscode/settings.json` | Universal VS Code baseline: `formatOnSave`, `files.exclude`, `search.exclude`, file nesting patterns, JSON/YAML formatters, `terminal.integrated.defaultLocation`. Does **not** define stack-specific formatters. |
-| `.vscode/tasks.json` | Runs `scripts/agents/start-agents.sh` on `folderOpen`. Guarded, so a project without that script opens cleanly. |
-| `scripts/agents/` | Three Claude Code role prompts and the launcher, Codex MCP bridge, and local command-palette extension. Language-agnostic, so they live here rather than in every example — see §5. |
+| `playwright-mcp.config.json` | Browser settings the Playwright MCP server reads at startup: Chromium, an isolated profile, a 1280×720 viewport at `deviceScaleFactor: 2`, screenshots under `screenshots/`. Picked up by the plugin — see §5. |
+| `.vscode/settings.json` | Universal VS Code baseline: `formatOnSave`, `files.exclude`, `search.exclude`, file nesting patterns, JSON/YAML formatters. Does **not** define stack-specific formatters. |
 
 Root `.gitignore` and `LICENSE` and `README.md` are for maintaining this
 repository itself and are not copied into downstream projects.
@@ -170,10 +134,10 @@ examples/<name>/
     └── workflows/             # stack-specific CI (test, deploy, dependency updates)
 ```
 
-The agent tooling is not part of an example. It lives once at the repository
-root, in `scripts/agents/`, and reaches `$TARGET` in bootstrap Step 1 (see §5).
+No example carries agent tooling. The agents come from the user's own Claude
+Code installation, not from anything this repository copies (see §5).
 `examples/swift-ios-tweak-jailed/` is the only example carrying a `scripts/`
-directory of its own, and it holds iOS build assets, not agent tooling.
+directory, and it holds iOS build assets.
 
 Stack-specific `.vscode/settings.json` in an example should contain only what
 the root baseline lacks — typically `[typescript]`, `[python]`, `[rust]`, etc.
@@ -220,113 +184,78 @@ If a project prefers not to enforce these rules, drop the `plugins` array in
 
 ---
 
-## 5. Coding agents (three Claude Code seats + Codex MCP)
+## 5. Coding agents (Claude Code + plugin MCP servers)
 
-`scripts/agents/` provides a tmux launcher for three visible Claude Code
-sessions. Bootstrap Step 1 copies the launcher, role prompts, local VS Code
-extension and root `.mcp.json` into each target project. The agent CLIs and Bun
-arrive as devcontainer features.
+This repository installs the agent **CLIs** and the things they need from the
+container, and nothing else. It ships no role prompts, no launcher, and no
+`.mcp.json`. Orchestration and MCP servers both come from
+[qtmleap/claude-plugins](https://github.com/qtmleap/claude-plugins), which
+installs into the user's own `~/.claude` and is bind-mounted into every
+container — so a plugin updated on the host is updated in every project at once.
 
-```
-┌──────────────┬──────────────┐
-│              │ implementer  │
-│ orchestrator ├──────────────┤
-│              │ reviewer     │
-└──────────────┴──────────────┘
-```
-
-Talk to the **orchestrator**. It is the only user-facing intake, delegates file
-changes to `implementer`, and asks `reviewer` for independent design or change
-review when that is useful. All three use Claude Code cross-session messaging
-(`ListAgents` / `SendMessage`, addressed by their `--name`); tmux is only the
-visible layout and never the messaging transport.
-
-Every Claude Code process reads the project `.mcp.json` and starts its own small
-Bun stdio server. The server exposes `codex.ask` and `codex.review`, starts
-`codex exec` only for a tool call, and remembers that seat's Codex thread for
-follow-up calls. The three threads are independent. There is no interactive
-Codex pane, fixed wait, or screen scrape.
-
-The launcher defaults to Sonnet 5 for orchestrator and reviewer and Opus 5 for
-implementer. Override `ORCHESTRATOR_MODEL`, `IMPLEMENTER_MODEL`, or
-`REVIEWER_MODEL` on the host to change that assignment; each example forwards
-those optional values through `containerEnv`. `CODEX_MODEL` remains the model
-passed to each MCP-launched Codex turn.
+Talk to Claude Code directly. Where work benefits from being split up, the
+plugins' own agents (`devflow:orchestrator`, `devflow:implementer`,
+`devflow:reviewer` and the rest) run as subagents inside that one session.
+There are no separate seats to start and nothing to attach to.
 
 ### What provides what
 
 | Piece | Where | Purpose |
 | --- | --- | --- |
-| Claude Code | `features` → `stu-bell/devcontainer-features/claude-code` | Installs `claude` for all three panes. |
-| Codex CLI | `features` → `thamaji/devcontainer-features/codex-cli` | Installs `codex`, called non-interactively by the MCP server. |
-| Bun | `features` → `shyim/devcontainers-features/bun` | Runs the dependency-free MCP server with automatic dotenv loading disabled. |
-| tmux | `features` → `jsburckhardt/devcontainer-features/tmux` | Hosts the three visible Claude Code panes. |
-| `start-agents.sh` | `scripts/agents/` | Creates, attaches, or restarts the session and stores each role in `@role`. |
-| `codex-mcp.mjs` / `.mcp.json` | root and `scripts/agents/` | Expose per-seat Codex `ask` and `review` tools over stdio. |
-| `@playwright/mcp` / `playwright-mcp.config.json` | `devDependencies` of the browser-capable examples, config at root | Let a seat drive a real browser: navigate, click, read the console, take screenshots. |
-| role prompts | `scripts/agents/*.md` | Define orchestration, implementation, and read-only review responsibilities. |
-| local extension | `scripts/agents/vscode/` | Adds **Agents: Start**, **Restart**, and **Attach** directly to the command palette. |
+| Claude Code | `features` → `stu-bell/devcontainer-features/claude-code` | Installs `claude`. |
+| Codex CLI | `features` → `thamaji/devcontainer-features/codex-cli` | Installs `codex`. The devflow plugin's MCP server runs `codex exec` for a tool call; without the CLI on `PATH` every call answers "codex is not installed". |
+| Bun | `features` → `shyim/devcontainers-features/bun` | Runs the plugins' MCP servers, which are Bun scripts. |
+| `~/.claude` mount | `mounts` | Carries the installed plugins and the Claude login into the container. |
+| `playwright-mcp.config.json` | repository root, copied in Step 1 | Browser settings for the Playwright MCP. The plugin passes `--config` when this file exists at the project root and falls back to its own defaults when it does not. |
 
-### Credentials and MCP approval
+### Credentials
 
 The host's `~/.claude` and `~/.codex` are bind-mounted read-write so logins made
 inside a container persist. The host forwards `ANTHROPIC_BASE_URL`,
 `ANTHROPIC_AUTH_TOKEN`, `OPENAI_API_KEY`, and `OPENAI_BASE_URL` through
-`remoteEnv`. `postAttachCommand.sh` logs Codex in and writes its compatible
-provider configuration when required. Set `CODEX_MODEL` on the host when the
-endpoint does not serve Codex's own default model.
+`remoteEnv`, and `CODEX_MODEL` through `containerEnv`.
 
-Claude Code asks for project MCP approval the first time it sees `.mcp.json` in
-a project. Approve `codex` and `playwright` from an interactive Claude Code
-session; until then `claude mcp list` reports them as pending.
+`postAttachCommand.sh` logs Codex in and writes its compatible provider
+configuration when required. Codex reads credentials from `auth.json` rather
+than from `OPENAI_API_KEY`, so the variable alone leaves it unauthenticated;
+and it ignores `model_provider` in a project-local config, so an
+OpenAI-compatible endpoint only takes effect from the user-level `CODEX_HOME`.
+Set `CODEX_MODEL` on the host when the endpoint does not serve Codex's own
+default model.
+
+### Browsers
 
 The four browser-capable examples (`hono-vite-react-node`,
 `hono-vite-react-workers`, `hono-vite-react-workers-prisma`, `vinext`) carry
-`playwright` and `@playwright/mcp` in `devDependencies`, so `bunx` runs the
-pinned copy. Their `postCreateCommand.sh` also installs Chromium and its system
-libraries, which the image does not carry; without that step the first
-`browser_navigate` returns `Browser "chromium" is not installed`. The root
-`.mcp.json` reaches every stack, so a Python, Rust or Swift project also starts
-the server and `bunx` fetches it on demand there — those need
+`playwright` and `@playwright/mcp` in `devDependencies`. Their
+`postCreateCommand.sh` also installs Chromium and its system libraries, which
+the image does not carry; without that step the first `browser_navigate`
+returns `Browser "chromium" is not installed`. That block is guarded on
+`playwright-mcp.config.json`, so it is inert in a project with no browser work.
+
+A Python, Rust or Swift project that wants a browser needs
 `bunx @playwright/mcp install-browser --with-deps chromium` run once by hand.
-Drop the `playwright` entry from `.mcp.json` in projects with no browser work.
 
-### Auto-start and command palette
+A connected MCP server says nothing about a browser being present: the server
+starts fine and fails at the first navigation.
 
-`postAttachCommand.sh` builds the session detached and installs the dependency-
-free local VS Code extension. `.vscode/tasks.json` then attaches on
-`folderOpen`. After the extension version changes, run **Developer: Reload
-Window** once so VS Code loads the updated Start, Restart, and Attach commands.
-VS Code may also require **Tasks: Manage Automatic Tasks** → **Allow Automatic
-Tasks in Folder** once per project.
+### Codex tuning
 
-**Agents: Restart** uses `tmux respawn-pane -k`, preserving the session and any
-attached terminal while replacing all three Claude processes. It also migrates
-a session made by the old layout: the third `codex` role becomes `reviewer`, and
-the old `claude code` display label becomes `implementer`.
-
-If `tmux` or `claude` is missing, the launcher warns and falls back to a plain
-login shell. A missing agent bundle is quieter because both startup hooks guard
-on `[ -x scripts/agents/start-agents.sh ]`.
-
-### Escape hatches
+These are read by the plugin's MCP server, not by anything in this repository.
+Only `CODEX_MODEL` is forwarded by the examples; set the rest on the host and
+add them to `remoteEnv` if a project needs them.
 
 | Variable | Effect |
 | --- | --- |
-| `AGENTS_TMUX=0` | Skip tmux and use a plain shell. |
-| `AGENTS_SESSION` | Override the tmux session name. The devcontainer supplies the host workspace directory name. |
-| `CLAUDE_ARGS` | Arguments for all three Claude panes. Default: `--dangerously-skip-permissions`; export an empty value to disable it. |
-| `ORCHESTRATOR_ARGS` / `IMPLEMENTER_ARGS` / `REVIEWER_ARGS` | Extra arguments for one Claude seat. |
-| `ORCHESTRATOR_MODEL` / `IMPLEMENTER_MODEL` / `REVIEWER_MODEL` | Models for the three seats. Defaults: Sonnet 5 / Opus 5 / Sonnet 5. |
-| `CODEX_MODEL` | Model for MCP-launched Codex turns. Default: whatever Codex selects. |
+| `CODEX_MODEL` | Model for MCP-launched Codex turns. Default: whatever Codex selects. A tool call may still name its own model. |
 | `CODEX_MCP_ARGS` | Arguments shared by `codex exec`, `exec resume`, and `exec review`. Default: `--dangerously-bypass-approvals-and-sandbox`. |
 | `CODEX_MCP_TIMEOUT_MS` | Maximum time for one Codex turn. Default: 600000. |
 | `CODEX_MCP_MAX_CHARS` | Maximum returned answer length. Default: 20000. |
 
-> The permissive defaults treat the devcontainer as the sandbox, but it still
+> The permissive default treats the devcontainer as the sandbox, but it still
 > receives host credentials, writable configuration mounts, and usually the
-> host Docker socket. Override `CLAUDE_ARGS` and `CODEX_MCP_ARGS` if that is
-> wider access than the project should have.
+> host Docker socket. Override `CODEX_MCP_ARGS` if that is wider access than
+> the project should have.
 
 ---
 
@@ -339,10 +268,9 @@ Rules for any agent modifying this repository:
    `examples/_base/`, symlinks, or generation scripts. Nothing under `examples/`
    may require resolution or generation at copy time.
 
-   This no longer amounts to a complete guarantee. The agent tooling now lives
-   at the repository root (constraint 8), so copying an example directory by
-   itself does not produce the files needed to auto-start the agents. A complete
-   project is Step 1 **and** Step 2 together, never Step 2 alone.
+   An example directory is still not a whole project on its own: the root
+   shared files of §3 have no per-example copies. A complete project is Step 1
+   **and** Step 2 together, never Step 2 alone.
 
 2. **Root = language-agnostic. Per-example = runtime-dependent.** If a config
    file's contents would be byte-identical across every conceivable example,
@@ -369,35 +297,23 @@ Rules for any agent modifying this repository:
    snapshot, not a runtime dependency.
 
 7. **Project-specific `.claude/` configuration is optional and per-example.**
-   The shared `.mcp.json` is the exception: it belongs at the root because all
-   examples use the same Codex bridge, and bootstrap copies it into each target.
 
-8. **The launcher, MCP bridge, role prompts, and command-palette extension live
-   once at the repository root, in `scripts/agents/`.** They are
-   language-agnostic and shared across all 13 examples, so constraint 2 places
-   them at the root. Edit them in one place; there is nothing to propagate.
+8. **Agent tooling does not live in this repository.** No `.mcp.json`, no role
+   prompts, no launcher, no command-palette extension — those come from
+   qtmleap/claude-plugins, which the user installs once into `~/.claude` (§5).
+   This repository's job stops at installing the CLIs they call and mounting
+   the directory they live in.
 
-   The price is the retreat in constraint 1: an example directory alone no longer
-   carries them, so bootstrapping needs Step 1 as well as Step 2. That trade is
-   deliberate, and it is worth being precise about what was traded. "Maintain a
-   single source for these files" is satisfied. "Copy a whole project with one
-   command" is not satisfied today — §2 spends seven commands on Step 1 alone —
-   but nothing about this layout prevents it: the copying could be collapsed
-   into a single command whenever that is worth doing. "An example directory is
-   self-contained" is the requirement that was actually given up, and no
-   rearrangement of the bootstrap brings it back. Do not reinstate the
-   per-example copies in order to win it back.
+   A copy distributed here would be a second copy: the plugins hold the
+   originals, and the two drift the moment one side is edited. That is what
+   happened with the Codex MCP bridge, which existed in both places and started
+   two servers in every session. Do not reinstate a repository-local
+   `.mcp.json`; if a plugin is missing something, fix the plugin.
 
-   They sit under `scripts/` rather than `.devcontainer/` because they are not
-   container build or lifecycle configuration: they are commands a human or an
-   agent runs from the workspace, like everything else in `scripts/`. Nothing
-   loads them at image build time — `postAttachCommand.sh` and
-   `.vscode/tasks.json` invoke them by path after the container is up, and Step 1
-   puts them at the project root, so the path they are invoked by is unchanged.
-
-   `.vscode/tasks.json` is the opposite case and lives at the root: it is what
-   *starts* the launcher, it is stack-agnostic, and it is guarded so that a
-   project without `scripts/agents/start-agents.sh` still opens cleanly.
+   `playwright-mcp.config.json` is the one file that stays, and it is not a
+   server: it is per-project browser settings that the plugin reads when it is
+   present. It is configuration for a tool, in the same category as
+   `.editorconfig`.
 
 ---
 

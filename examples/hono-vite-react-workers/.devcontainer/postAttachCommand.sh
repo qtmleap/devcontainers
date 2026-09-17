@@ -33,10 +33,3 @@ write_codex_provider() {
   } >"$cfg.tmp" && chmod 600 "$cfg.tmp" && mv "$cfg.tmp" "$cfg"
 }
 write_codex_provider || true
-
-# Build the agent session up front, so the panes are already running by the time
-# the folderOpen task attaches to it.
-[ -x scripts/agents/start-agents.sh ] && scripts/agents/start-agents.sh --no-attach || true
-# Give the agent tasks their own command palette entries. Installing is skipped
-# when this version is already present; a changed version appears after reload.
-[ -x scripts/agents/vscode/install.sh ] && scripts/agents/vscode/install.sh || true
