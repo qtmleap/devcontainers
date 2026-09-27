@@ -34,7 +34,7 @@
     "@biomejs/biome": "^2",
     "@cloudflare/vite-plugin": "^1",
     "@cloudflare/workers-types": "^4",
-    "@playwright/mcp": "^0.0.81",
+    "@playwright/mcp": "0.0.82",
     "@types/bun": "^1",
     "@types/react": "^19",
     "@types/react-dom": "^19",

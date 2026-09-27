@@ -206,7 +206,7 @@ There are no separate seats to start and nothing to attach to.
 | Codex CLI | `features` → `thamaji/devcontainer-features/codex-cli` | Installs `codex`. The devflow plugin's MCP server runs `codex exec` for a tool call; without the CLI on `PATH` every call answers "codex is not installed". |
 | Bun | `features` → `shyim/devcontainers-features/bun` | Runs the plugins' MCP servers, which are Bun scripts. |
 | `~/.claude` mount | `mounts` | Carries the installed plugins and the Claude login into the container. |
-| `playwright-mcp.config.json` | repository root, copied in Step 1 | Browser settings for the Playwright MCP. The plugin passes `--config` when this file exists at the project root and falls back to its own defaults when it does not. |
+| `playwright-mcp.config.json` | repository root, copied in Step 1 | Browser settings for the Playwright MCP. The plugin passes `--config` when this file exists at the project root and falls back to its own defaults when it does not, and installs the browser the file names. |
 
 ### Credentials
 
@@ -227,14 +227,29 @@ default model.
 
 The four browser-capable examples (`hono-vite-react-node`,
 `hono-vite-react-workers`, `hono-vite-react-workers-prisma`, `vinext`) carry
-`playwright` and `@playwright/mcp` in `devDependencies`. Their
-`postCreateCommand.sh` also installs Chromium and its system libraries, which
-the image does not carry; without that step the first `browser_navigate`
-returns `Browser "chromium" is not installed`. That block is guarded on
-`playwright-mcp.config.json`, so it is inert in a project with no browser work.
+`playwright` and `@playwright/mcp` in `devDependencies`, and neither the
+browser nor its system libraries ship in the image; without them the first
+`browser_navigate` returns `Browser "chromium" is not installed`.
 
-A Python, Rust or Swift project that wants a browser needs
-`bunx @playwright/mcp install-browser --with-deps chromium` run once by hand.
+The two packages look for different Chromium revisions, because
+`@playwright/mcp` bundles its own, newer Playwright build. The examples'
+`postCreateCommand.sh` therefore installs a browser for each package that is in
+`node_modules`, through that package's own CLI, so the revisions follow the
+versions pinned in `package.json`. The MCP install also runs `--with-deps`,
+which brings the shared system libraries and fonts, CJK included. A project
+that drops either package loses the matching install with it.
+
+The playwright plugin runs the `@playwright/mcp` version installed in the
+project, and `@latest` only when there is none, so the server finds the
+revision that was installed for it. On start it also installs the browser that
+version expects, which takes a fraction of a second when the browser is already
+on disk. A first download there takes longer than the MCP startup, and tool
+calls made during it fail until it lands, which is why the examples still
+install the browser ahead of time.
+
+A Python, Rust or Swift project gets the browser from the plugin, but not the
+system libraries, which need root. Run
+`bunx @playwright/mcp@latest install-browser --with-deps chromium` once by hand.
 
 A connected MCP server says nothing about a browser being present: the server
 starts fine and fails at the first navigation.

@@ -24,10 +24,17 @@ fi
 
 # Playwright MCP drives a real Chromium, and neither the browser nor its system
 # libraries ship in the image, so the first `browser_navigate` fails with
-# `Browser "chromium" is not installed` until both are installed here. The MCP
-# server bundles its own Playwright build and expects a different Chromium
-# revision than the `playwright` devDependency, so the browser has to come from
-# the MCP CLI rather than `playwright install`.
-if [ -f playwright-mcp.config.json ]; then
+# `Browser "chromium" is not installed` until both are installed here.
+#
+# The two Playwright packages in devDependencies look for different Chromium
+# revisions: @playwright/mcp bundles its own, newer Playwright build. Each one
+# therefore installs its own browser. bunx runs the copy in node_modules, so
+# the revisions follow the versions pinned in package.json, and the playwright
+# plugin runs that same @playwright/mcp version. `--with-deps` also brings the
+# system libraries and fonts, Japanese included, which both browsers share.
+if [ -d node_modules/@playwright/mcp ]; then
   bunx @playwright/mcp install-browser --with-deps chromium
+fi
+if [ -d node_modules/playwright ]; then
+  bunx playwright install chromium
 fi

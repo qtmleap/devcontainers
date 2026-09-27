@@ -27,7 +27,7 @@
     "@biomejs/biome": "^2",
     "@hono/vite-build": "^1",
     "@hono/vite-dev-server": "^0.26",
-    "@playwright/mcp": "^0.0.81",
+    "@playwright/mcp": "0.0.82",
     "@types/bun": "^1",
     "@types/node": "^26",
     "@types/react": "^19",
