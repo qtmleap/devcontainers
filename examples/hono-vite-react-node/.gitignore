@@ -240,3 +240,6 @@ vite.config.*.timestamp-*
 
 # === Playwright (MCP outputDir) ===
 screenshots/
+
+# Local Codex configuration, credentials, and session state.
+/.codex/

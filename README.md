@@ -58,6 +58,11 @@ cp -a .commitlintrc.yaml "$TARGET/"
 cp -a .actrc             "$TARGET/"
 cp -a playwright-mcp.config.json "$TARGET/"
 cp -a .vscode            "$TARGET/"
+# Keep an existing project configuration; copy only the shared config template.
+mkdir -p "$TARGET/.codex"
+if [ ! -e "$TARGET/.codex/config.toml" ]; then
+  cp .codex/config.toml "$TARGET/.codex/config.toml"
+fi
 
 # Step 2: copy the chosen example (use `.` suffix to include dotfiles)
 # This OVERWRITES .vscode/settings.json with the example's stack-specific one,
@@ -103,6 +108,7 @@ for downstream users.
 
 | File | Purpose |
 | --- | --- |
+| `.codex/config.toml` | Shared gateway/model template. Copy only this file into the target root; credentials and session state are never copied. |
 | `.editorconfig` | Indent, EOL, charset. 2-space, LF, UTF-8. `ts/tsx/css/json` use single quotes. |
 | `.gitattributes` | Force LF on all text files. Marks lockfiles and `*.gen.ts` as `linguist-generated`. |
 | `.commitlintrc.yaml` | Conventional Commits. Enforces `type-enum` (feat/fix/docs/…) and `header-max-length: 128`. |
@@ -210,18 +216,29 @@ There are no separate seats to start and nothing to attach to.
 
 ### Credentials
 
-The host's `~/.claude` and `~/.codex` are bind-mounted read-write so logins made
-inside a container persist. The host forwards `ANTHROPIC_BASE_URL`,
-`ANTHROPIC_AUTH_TOKEN`, `OPENAI_API_KEY`, and `OPENAI_BASE_URL` through
-`remoteEnv`, and `CODEX_MODEL` through `containerEnv`.
+The examples forward `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`,
+`OPENAI_API_KEY`, and `OPENAI_BASE_URL` through `remoteEnv`.
+`CLAUDE_CODE_AUTO_MODE_SERVER` is set to `"0"` there as well.
 
-`postAttachCommand.sh` logs Codex in and writes its compatible provider
-configuration when required. Codex reads credentials from `auth.json` rather
-than from `OPENAI_API_KEY`, so the variable alone leaves it unauthenticated;
-and it ignores `model_provider` in a project-local config, so an
-OpenAI-compatible endpoint only takes effect from the user-level `CODEX_HOME`.
-Set `CODEX_MODEL` on the host when the endpoint does not serve Codex's own
-default model.
+Each example sets `remoteEnv.CODEX_HOME` to `${containerWorkspaceFolder}/.codex`.
+Dev Containers expands the variable to the current workspace root, so no
+fixed container path is required. The existing `containerEnv.CODEX_HOME` entries
+use the same variable. For these Compose-based examples, `remoteEnv` is the
+active VS Code environment setting; container-wide variables belong in Compose. Codex therefore reads the
+copied `.codex/config.toml` as its user configuration, including the `gateway`
+provider, `codex,gpt-6.1-sol` model, and `low` reasoning effort. The gateway
+provider reads its API key from `OPENAI_API_KEY`; no key is stored in the
+template. A command-line model override can still override this default.
+
+This repository tracks only the shared `.codex/config.toml` template. Each
+example's `.gitignore` excludes the target project's entire `.codex/`
+directory, including its local configuration, credentials, and session state.
+Lifecycle hooks do not create or rewrite Codex configuration on the host or in
+the project. To use the same configuration from a host shell, run
+`CODEX_HOME="$PWD/.codex" codex` from the project root.
+
+The existing host `~/.claude` and `~/.codex` bind mounts remain available, but
+Codex launched with the workspace `CODEX_HOME` uses the project's directory.
 
 ### Browsers
 

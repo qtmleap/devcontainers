@@ -1,0 +1,10 @@
+model_provider = "gateway"
+model = "codex,gpt-6.1-sol"
+model_reasoning_effort = "low"
+
+[model_providers.gateway]
+name = "gateway"
+model = "codex,gpt-6.1-sol"
+base_url = "https://ai.qleap.jp/v1"
+env_key = "OPENAI_API_KEY"
+wire_api = "responses"

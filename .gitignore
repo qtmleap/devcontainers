@@ -98,3 +98,11 @@ examples/swift-ios-tweak/package.json
 # Python uv-generated lockfiles (users regen in their project)
 examples/python/uv.lock
 examples/python-cuda/uv.lock
+
+# Local Codex configuration, credentials, and session state.
+/.codex/
+
+# Track the shared template only; keep Codex credentials and state local.
+!/.codex/
+/.codex/*
+!/.codex/config.toml

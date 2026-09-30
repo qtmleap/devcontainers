@@ -552,3 +552,6 @@ assets/*.ipa
 # catch vendor/dobby/lib/; override for our specific vendored path.
 !vendor/dobby/lib/
 
+
+# Local Codex configuration, credentials, and session state.
+/.codex/
