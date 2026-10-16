@@ -34,6 +34,8 @@
       "configureZshAsDefaultShell": true
     },
     "ghcr.io/devcontainers/features/github-cli:1": {},
+    // Guarded Git. Without a human github.com gh login Git stays blocked; after `gh auth login -h github.com`, retry with commitguard-devcontainer-setup.
+    "ghcr.io/tkgstrator/commitguard:1": {},
     "ghcr.io/va-h/devcontainers-features/uv:1": {
       "version": "latest"
     },

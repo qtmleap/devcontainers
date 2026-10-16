@@ -211,6 +211,7 @@ There are no separate seats to start and nothing to attach to.
 | Claude Code | `features` → `stu-bell/devcontainer-features/claude-code` | Installs `claude`. |
 | Codex CLI | `features` → `thamaji/devcontainer-features/codex-cli` | Installs `codex`. The devflow plugin's MCP server runs `codex exec` for a tool call; without the CLI on `PATH` every call answers "codex is not installed". |
 | Bun | `features` → `shyim/devcontainers-features/bun` | Runs the plugins' MCP servers, which are Bun scripts. |
+| CommitGuard | `features` → `tkgstrator/commitguard` | Guarded `git` for the workspace repository; see [Guarded Git](#guarded-git-commitguard). |
 | `~/.claude` mount | `mounts` | Carries the installed plugins and the Claude login into the container. |
 | `playwright-mcp.config.json` | repository root, copied in Step 1 | Browser settings for the Playwright MCP. The plugin passes `--config` when this file exists at the project root and falls back to its own defaults when it does not. |
 
@@ -239,6 +240,52 @@ the project. To use the same configuration from a host shell, run
 
 The existing host `~/.claude` and `~/.codex` bind mounts remain available, but
 Codex launched with the workspace `CODEX_HOME` uses the project's directory.
+
+### Guarded Git (commitguard)
+
+Every example installs the Dev Container Feature
+[`ghcr.io/tkgstrator/commitguard:1`](https://github.com/tkgstrator/commitlint-rust/tree/master/features/commitguard).
+Keep the `:1` tag: never `:latest`, and never the retired
+`ghcr.io/tkgstrator/commitlint-rust/...` namespace. It installs `commitguard` and
+`commitlint-rust`, and on every container create and start activates a guarded
+`git` for the workspace repository. Commits and pushes must carry the identity of
+the authenticated human `github.com` `gh` account and pass the commit message
+policy. It supports Debian/Ubuntu on amd64/arm64; every example qualifies,
+including the Swift ones (Ubuntu 24.04 `noble`).
+
+Setup:
+
+1. The workspace must already be a Git repository when the container opens
+   (`git init` first for a new project).
+2. A human `github.com` login in `gh` must be visible inside the container. The
+   examples mount `~/.config/gh` read-only, so run `gh auth login -h github.com`
+   on the host. A token that lives only in the host's OS keychain is not visible
+   to the container.
+3. Rebuild the container. Adding the Feature to an existing project needs a
+   rebuild; it does not take effect on a running container.
+
+Fail-closed: when activation fails (no repository, no human login, unsafe layout),
+ordinary `git` refuses to run and prints instructions. Dev Containers also skips
+the lifecycle commands that follow the failed one, including the example's
+`onCreateCommand` and `postCreateCommand.sh`. After logging in on the host, run
+`commitguard-devcontainer-setup` inside the container to retry activation, and
+`commitguard --strict account` to refresh a missing or changed identity cache.
+That restores Git only; use Rebuild Container to run the skipped lifecycle
+commands.
+
+What it writes:
+
+- `.codex/skills/gh-commit-identity` and `.claude/skills/gh-commit-identity` in
+  the workspace. These are generated binaries, already excluded by each example's
+  `.gitignore` (`.claude/`, `.codex/`).
+- A managed policy block in the workspace `AGENTS.md` and `CLAUDE.md`. These
+  files are not ignored; review them before committing.
+- Global Git configuration and shell startup files, in the container's private
+  `HOME` only.
+
+The host `~/.claude` and `~/.codex` bind mounts are never touched, and this
+repository's mounts are unchanged. The guard covers shells whose `PATH` includes
+the Feature directory; an absolute `/usr/bin/git` bypasses it.
 
 ### Browsers
 
