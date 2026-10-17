@@ -173,6 +173,10 @@ references, `SKILL.md` and the AGENTS block (including review routing); nothing
 autosyncs. Include `references/release-policy.md` when merging. Release-policy
 adoption grants no Apple write, notification or release authority.
 
+The shared AGENTS block also covers topic-session reuse, bounded review requests
+and evidence reuse. It installs no cache/session engine; provider cache savings
+are unverified unless the actual tool exposes usage evidence.
+
 UI mock tooling is optional. If a project already uses a mock-first workflow and
 mock viewer, agents read and follow it; the mock-diff plugin lives in
 `qtmleap/claude-plugins`, is not duplicated here, and is not required to be

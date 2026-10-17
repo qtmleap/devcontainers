@@ -103,8 +103,9 @@ Applies only when the named tools are available; otherwise report the missing
 preferred capability and use an authorized alternative. Required repo gates and
 existing review policy always still apply.
 
-- **LocalGPT**: planning, design, independent review. **Claude Code (MCP)**: repo
-  inspection, implementation, independent feasibility and actual-diff review.
+- **LocalGPT**: planning, design, independent review. **Claude Code (MCP)**:
+  primarily independent review of implemented code and its actual diff; also
+  repo inspection, implementation and feasibility checks when assigned.
   **LocalMCP**: only the LocalGPT worker's verified host I/O; never a reviewer.
   **Codex**: coordination, integration, visual and actual evidence.
 - Before substantive implementation, get an independent LocalGPT plan review and
@@ -127,6 +128,28 @@ existing review policy always still apply.
   workspaces. Use topic-specific LocalGPT sessions through its MCP on the existing
   shared tab; do not bypass failures through browser automation. A missing
   actual-file review cannot be claimed.
+
+## Session reuse and token efficiency
+
+- Continue the same topic and worker role in its existing LocalGPT session.
+  Keep independent reviewers separate from implementers. Resume a reviewer's own
+  follow-up only if the tool supports it; do not invent Claude resume support.
+  Job IDs and MCP transport sessions are not model conversation memory.
+- Reuse model/capability and host-access discoveries while valid; refresh after
+  relevant host, authentication, tool or task requirements change, or failure.
+- Send concise paths, revisions, line ranges, acceptance criteria and deltas.
+  Request bounded findings or changed conclusions, not repeated full reports.
+  Keep useful source-bound summaries privately; read current affected files
+  when inputs change. A cached review cannot approve unseen changes.
+- Use native tools for deterministic checks and batch independent reads. Avoid
+  model calls for acknowledgements, formatting or already-known status.
+- Preserve stable reusable instructions where the actual API supports caching.
+  Session reuse does not guarantee a cache hit or lower total usage. Inspect
+  input/output and cache-read/write usage when exposed; otherwise report savings
+  as unverified. Do not pad prompts or retain irrelevant history for a cache hit.
+- This template adds no cache or session engine. If the current Claude MCP has
+  no resume interface, use concise self-contained requests and retained job
+  results; do not claim that it resumes a previous conversation.
 
 ## Native iOS / iPadOS work
 
