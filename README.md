@@ -58,6 +58,10 @@ cp -a .commitlintrc.yaml "$TARGET/"
 cp -a .actrc             "$TARGET/"
 cp -a playwright-mcp.config.json "$TARGET/"
 cp -a .vscode            "$TARGET/"
+# Keep existing project instructions, including symbolic links.
+if [ ! -e "$TARGET/AGENTS.md" ] && [ ! -L "$TARGET/AGENTS.md" ]; then
+  cp -a AGENTS.md "$TARGET/"
+fi
 # Keep an existing project configuration; copy only the shared config template.
 mkdir -p "$TARGET/.codex"
 if [ ! -e "$TARGET/.codex/config.toml" ]; then
@@ -83,6 +87,13 @@ git init  # if not already initialized
 git submodule add https://github.com/qtmleap/biome-plugins.git biome-plugins
 ```
 
+If the target already has `AGENTS.md`, merge the `development-orchestration`
+block from the shared [AGENTS.md](AGENTS.md) into it by hand. When refreshing an
+existing copy, replace that marked block instead of appending it again. Preserve
+project-specific instructions and the managed commit-policy blocks installed by
+CommitGuard. The shared file contains only the development routine; it does not
+duplicate CommitGuard's managed policy.
+
 **Step 2b, in detail.** An example's `.vscode/settings.json` carries only
 stack-specific keys — ten to twelve of them, the `[typescript]` / `[python]` /
 `[rust]` formatter bindings and similar — while the root baseline installed in
@@ -104,10 +115,11 @@ for downstream users.
 
 ---
 
-## 3. Root files (language-agnostic, always copied)
+## 3. Root files (language-agnostic shared configuration)
 
 | File | Purpose |
 | --- | --- |
+| `AGENTS.md` | Portable parallel-development, verification, Tailscale preview, UI/store screenshot, and ASC tool policy. Copy when absent; merge the marked block into existing project instructions. |
 | `.codex/config.toml` | Shared gateway/model template. Copy only this file into the target root; credentials and session state are never copied. |
 | `.editorconfig` | Indent, EOL, charset. 2-space, LF, UTF-8. `ts/tsx/css/json` use single quotes. |
 | `.gitattributes` | Force LF on all text files. Marks lockfiles and `*.gen.ts` as `linguist-generated`. |
@@ -351,7 +363,7 @@ Rules for any agent modifying this repository:
    stack-scoped. The root `.vscode/settings.json` defines only JSON/YAML
    formatters and general editor behavior.
 
-5. **`.editorconfig`, `.gitattributes`, `.commitlintrc.yaml`, `.actrc` are
+5. **`AGENTS.md`, `.editorconfig`, `.gitattributes`, `.commitlintrc.yaml`, `.actrc` are
    root-only.** Do not duplicate these files inside example folders under any
    circumstance.
 
@@ -374,10 +386,14 @@ Rules for any agent modifying this repository:
    two servers in every session. Do not reinstate a repository-local
    `.mcp.json`; if a plugin is missing something, fix the plugin.
 
-   `playwright-mcp.config.json` is the one file that stays, and it is not a
-   server: it is per-project browser settings that the plugin reads when it is
-   present. It is configuration for a tool, in the same category as
-   `.editorconfig`.
+   Root `AGENTS.md` is allowed as portable shared policy text. Keep it independent
+   of host-specific paths and installed tool state; discover capabilities on the
+   execution host. Agent implementations, role prompts, servers and launchers
+   continue to live in the plugins.
+
+   The shared `playwright-mcp.config.json` contains per-project browser settings
+   that the plugin reads when it is present. It is configuration for a tool, in
+   the same category as `.editorconfig`.
 
 ---
 
