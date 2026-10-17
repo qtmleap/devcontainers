@@ -12,7 +12,9 @@ Instruction-only: no runners, scripts, CI jobs or dependencies. Shared parallel-
 verification, Tailscale preview, UI design, screenshot and App Store Connect rules
 live in the root `AGENTS.md` (`development-orchestration`); apply them, do not
 restate them. Scope choices and the release matrix:
-[references/testing-policy.md](references/testing-policy.md).
+[references/testing-policy.md](references/testing-policy.md). This template
+itself installs no jobs; App Review submission and follow-up route to
+[references/app-review-followup.md](references/app-review-followup.md).
 
 ## 1. Discover, never guess
 
@@ -32,8 +34,9 @@ restate them. Scope choices and the release matrix:
 ## 2. Work loop
 
 1. Implement with the project's conventions and design system. New screens or
-   substantial flow changes: use an available UI design/prototyping capability
-   first (root policy). Small fixes need none.
+   substantial flow changes: reuse existing spec, component catalog and mocks,
+   and use an available mock-first or UI design/prototyping capability first
+   (root policy). Small fixes need none.
 2. Local edit checks: the smallest relevant regression for the change, plus
    mandatory hooks. Broaden only for the change's risk or explicit project policy.
 3. Before a PR: scope checks by changed behavior. Full required CI then runs on
@@ -88,6 +91,8 @@ evidence. Report required missing evidence as "not verified".
 - Web previews: follow the root Tailscale-only policy; discover the address
   yourself instead of asking. A web prototype does not replace simulator/device
   UI checks.
+- Adopted mocks: compare simulator/device captures at the matching state and size
+  to the adopted mock (root policy); record only actual human design selections.
 - Store screenshots and metadata: look for a suitable available skill (for
   example `app-store-screenshots`, `prepare-localized-app-store`) and read it on
   the host. Do not require installing it for unrelated work.
@@ -95,3 +100,6 @@ evidence. Report required missing evidence as "not verified".
   rules. A failed or transient API call is not a reason to ask for an Apple
   browser login. Keep signing/provisioning, upload acceptance, Apple processing,
   tester availability and review/release state as separate facts.
+- Submitting to App Review: follow
+  [references/app-review-followup.md](references/app-review-followup.md) for the
+  monitor, rejection handling and resubmission.

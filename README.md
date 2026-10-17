@@ -137,8 +137,8 @@ for downstream users.
 
 | File | Purpose |
 | --- | --- |
-| `AGENTS.md` | Portable parallel-development, verification, Tailscale preview, UI/store screenshot, and ASC tool policy. Copy when absent; merge the marked block into existing project instructions. |
-| `.agents/skills/ios-development/` | Instruction-only native iOS/iPadOS workflow and test policy. Copied only for `swift-ios-app` by Step 2a; see adoption and refresh below. |
+| `AGENTS.md` | Portable parallel-development, verification, Tailscale preview, UI/store screenshot, ASC tool, and App Review follow-up policy. Copy when absent; merge the marked block into existing project instructions. |
+| `.agents/skills/ios-development/` | Instruction-only native iOS/iPadOS workflow, test policy, and App Review follow-up reference. Copied only for `swift-ios-app` by Step 2a; see adoption and refresh below. |
 | `.codex/config.toml` | Shared gateway/model template. Copy only this file into the target root; credentials and session state are never copied. |
 | `.editorconfig` | Indent, EOL, charset. 2-space, LF, UTF-8. `ts/tsx/css/json` use single quotes. |
 | `.gitattributes` | Force LF on all text files. Marks lockfiles and `*.gen.ts` as `linguist-generated`. |
@@ -165,6 +165,16 @@ with `TARGET` set to the target project:
 `diff -r .agents/skills/ios-development "$TARGET/.agents/skills/ios-development"`.
 Merge explicitly, preserve local edits and symlinks, and record the source Git
 revision with the project's existing setup notes. There is no automatic sync.
+
+Future App Review submissions get a monitor and scoped rejection follow-up per
+`references/app-review-followup.md`; the template installs no jobs and adoption
+grants no Apple-write authority. Existing copies must explicitly merge the new
+reference (and the AGENTS block); nothing autosyncs.
+
+UI mock tooling is optional. If a project already uses a mock-first workflow and
+mock viewer, agents read and follow it; the mock-diff plugin lives in
+`qtmleap/claude-plugins`, is not duplicated here, and is not required to be
+installed.
 
 ---
 

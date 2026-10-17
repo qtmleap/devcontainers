@@ -38,10 +38,18 @@ project-specific instructions and existing managed policy blocks when adopting.
 
 ## UI design, previews, and store screenshots
 
-- For new screens or substantial flow changes, use an available UI design and
-  interactive prototyping capability, such as Product Design, to explore screens,
-  navigation, and error/empty/loading states before implementation. Reuse the
-  existing design system. Small UI fixes do not require a new prototype.
+- For new screens or substantial flow changes, first discover and reuse the
+  project's canonical spec, design system, component catalog, and screen/flow
+  mocks. If a mock-first workflow or mock viewer is available (for example the
+  mock-diff plugin in qtmleap/claude-plugins), read that host's actual skill and
+  follow it; do not require installing it. Otherwise use an available UI
+  design/prototyping capability (Product Design is one option) to explore screens,
+  navigation, and error/empty/loading states. Small UI fixes need no prototype.
+- When design choices are pending, show candidates through the existing viewer for
+  a human decision; never fabricate an adopted selection.
+- For native UI with an adopted mock, compare real simulator/device captures at
+  the matching state and size against it. A web screenshot is not native
+  evidence, and a quantitative score is not automatic approval.
 - Web mocks and previews default to Tailscale-only access. Discover the actual
   host's Tailscale IP or MagicDNS name and available port. Bind to the intended
   Tailscale interface, or use loopback behind Tailscale Serve; do not enable public
@@ -77,6 +85,17 @@ project-specific instructions and existing managed policy blocks when adopting.
 - Keep upload acceptance, Apple processing completion, tester availability, and
   App Review/release state distinct. Inspect operation status after an uncertain
   upload or write instead of blindly resending it.
+- When an App Review submission is confirmed (or an authorized submitted app is
+  read back), create or update one monitor for that exact app/platform in the
+  app's existing chat: hourly by default (configurable), quiet when unchanged.
+  Read current rejection messages, fix within scope, verify, and resubmit when
+  the state requires it; human scope and stricter gates still apply. Classify
+  the issue before writes; never auto-resubmit withdrawn submissions or replay
+  uncertain writes. Sending reviewer replies needs explicit human authority.
+  Follow
+  `.agents/skills/ios-development/references/app-review-followup.md` if present;
+  else find an equivalent release workflow. Report missing monitoring/tool
+  capabilities explicitly; never claim an unscheduled monitor is active.
 
 ## Native iOS / iPadOS work
 
