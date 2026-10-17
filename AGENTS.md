@@ -97,10 +97,43 @@ project-specific instructions and existing managed policy blocks when adopting.
   else find an equivalent release workflow. Report missing monitoring/tool
   capabilities explicitly; never claim an unscheduled monitor is active.
 
+## Review routing and named reviewers
+
+Applies only when the named tools are available; otherwise report the missing
+preferred capability and use an authorized alternative. Required repo gates and
+existing review policy always still apply.
+
+- **LocalGPT**: planning, design, independent review. **Claude Code (MCP)**: repo
+  inspection, implementation, independent feasibility and actual-diff review.
+  **LocalMCP**: only the LocalGPT worker's verified host I/O; never a reviewer.
+  **Codex**: coordination, integration, visual and actual evidence.
+- Before substantive implementation, get an independent LocalGPT plan review and
+  a Claude repo-feasibility review before sharing conclusions.
+- After substantive implementation, use a fresh, separate, read-only Claude
+  reviewer, not the implementer's self-review. Complex or high-impact changes
+  also get a LocalGPT actual-files review, only if its worker access is verified.
+- Small low-impact changes: one adequate route, proportional. Do not repeat
+  reviews per upload or stage unless source, contract or risk changed.
+- Tie each review to target SHA/content, the actual diff or relevant files, and
+  the gates. Findings carry severity and file references; Codex verifies
+  material resolutions. A running receipt is not a completed review.
+- Discover LocalGPT status, then capabilities, then models, sequentially; discover
+  Claude models/source/execution_context. Choose observed IDs proportionally
+  (Instant/Haiku light, Thinking/Sonnet routine, GPT 6 Pro/Opus difficult or
+  high-impact when available); no fixed IDs.
+- Verify host/workspace before file tasks. LocalGPT's own LocalMCP must prove
+  access, and jobs must use that same selected connection. Do not paste files or
+  large diffs as a fallback. Codex and Claude use native tools in their accessible
+  workspaces. Use topic-specific LocalGPT sessions through its MCP on the existing
+  shared tab; do not bypass failures through browser automation. A missing
+  actual-file review cannot be claimed.
+
 ## Native iOS / iPadOS work
 
 - For native iOS/iPadOS (or associated macOS target) features, debugging,
   review, testing, or release, read `.agents/skills/ios-development/SKILL.md`
   if present in the project; otherwise continue with the rules above. Skip it
   for web-only work and generic documentation.
+- For packaging, TestFlight, App Store submission or launch, also read
+  `.agents/skills/ios-development/references/release-policy.md` if present.
 <!-- /development-orchestration -->

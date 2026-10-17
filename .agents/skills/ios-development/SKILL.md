@@ -13,7 +13,10 @@ verification, Tailscale preview, UI design, screenshot and App Store Connect rul
 live in the root `AGENTS.md` (`development-orchestration`); apply them, do not
 restate them. Scope choices and the release matrix:
 [references/testing-policy.md](references/testing-policy.md). This template
-itself installs no jobs; App Review submission and follow-up route to
+itself installs no jobs. Review routing (LocalGPT / Claude Code / LocalMCP /
+Codex) is in the root `AGENTS.md`. On packaging, TestFlight, submission or
+launch, read [references/release-policy.md](references/release-policy.md).
+App Review submission and follow-up route to
 [references/app-review-followup.md](references/app-review-followup.md).
 
 ## 1. Discover, never guess
