@@ -77,4 +77,11 @@ project-specific instructions and existing managed policy blocks when adopting.
 - Keep upload acceptance, Apple processing completion, tester availability, and
   App Review/release state distinct. Inspect operation status after an uncertain
   upload or write instead of blindly resending it.
+
+## Native iOS / iPadOS work
+
+- For native iOS/iPadOS (or associated macOS target) features, debugging,
+  review, testing, or release, read `.agents/skills/ios-development/SKILL.md`
+  if present in the project; otherwise continue with the rules above. Skip it
+  for web-only work and generic documentation.
 <!-- /development-orchestration -->
