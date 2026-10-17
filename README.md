@@ -174,8 +174,11 @@ autosyncs. Include `references/release-policy.md` when merging. Release-policy
 adoption grants no Apple write, notification or release authority.
 
 The shared AGENTS block also covers topic-session reuse, bounded review requests
-and evidence reuse. It installs no cache/session engine; provider cache savings
-are unverified unless the actual tool exposes usage evidence.
+and evidence reuse. When the discovered Claude MCP supports review-session
+resume, agents use its explicit review/resume fields and a native diff manifest.
+The template installs no runtime engine; it does not infer resume support or
+provider cache savings from a job receipt. Usage and cache evidence must come
+from the actual tool, with invocation and cumulative figures kept distinct.
 
 UI mock tooling is optional. If a project already uses a mock-first workflow and
 mock viewer, agents read and follow it; the mock-diff plugin lives in

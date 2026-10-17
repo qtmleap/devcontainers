@@ -135,6 +135,20 @@ existing review policy always still apply.
   Keep independent reviewers separate from implementers. Resume a reviewer's own
   follow-up only if the tool supports it; do not invent Claude resume support.
   Job IDs and MCP transport sessions are not model conversation memory.
+- When the discovered Claude MCP schema supports it, start an independent
+  code-review chain with `review:true`, `resumable:true` and an explicit suitable
+  model. Retain the returned job/session identifiers. For that reviewer's
+  follow-up, use `resume_job_id` from its current successful head and send only
+  changed paths, the delta, the new source fingerprint and unresolved findings.
+  Build the manifest with native tools; include relevant uncommitted and new
+  files. Give a read-only reviewer a manifest it can read without shell access.
+  Re-read affected source and verify integration; start a fresh chain after a
+  blocked/failed turn or when topic, role or pinned model must change.
+- Use bounded job listings and requested findings. Inspect `result.usage` (or
+  failure accounting when available): invocation token/cache counts differ from
+  cumulative conversation model usage and cost. Compare only matching scopes;
+  absent accounting or a reset makes cost deltas unknown. CLI estimates do not
+  prove billing savings. Never sum cumulative costs as separate invocation costs.
 - Reuse model/capability and host-access discoveries while valid; refresh after
   relevant host, authentication, tool or task requirements change, or failure.
 - Send concise paths, revisions, line ranges, acceptance criteria and deltas.
