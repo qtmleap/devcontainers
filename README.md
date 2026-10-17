@@ -41,6 +41,7 @@ them as errors. The container covers `swift-format`, the coding agents and any
 SDK-independent code; compiling, testing and signing stay on a Mac. Its
 `integration.yaml` therefore ships lint only, with the macOS build job left as a
 documented per-project addition.
+Native app projects also adopt the shared iOS skill in bootstrap Step 2a.
 
 ---
 
@@ -58,16 +59,37 @@ cp -a .commitlintrc.yaml "$TARGET/"
 cp -a .actrc             "$TARGET/"
 cp -a playwright-mcp.config.json "$TARGET/"
 cp -a .vscode            "$TARGET/"
+# Keep existing project instructions, including symbolic links.
+if [ ! -e "$TARGET/AGENTS.md" ] && [ ! -L "$TARGET/AGENTS.md" ]; then
+  cp -a AGENTS.md "$TARGET/"
+fi
 # Keep an existing project configuration; copy only the shared config template.
 mkdir -p "$TARGET/.codex"
 if [ ! -e "$TARGET/.codex/config.toml" ]; then
   cp .codex/config.toml "$TARGET/.codex/config.toml"
 fi
 
-# Step 2: copy the chosen example (use `.` suffix to include dotfiles)
+# Step 2: copy the chosen example (the `/.` suffix includes dotfiles)
 # This OVERWRITES .vscode/settings.json with the example's stack-specific one,
 # discarding the root baseline that Step 1 just installed.
-cp -a examples/<name>/.  "$TARGET/"
+EXAMPLE='<name>'
+cp -a "examples/$EXAMPLE/." "$TARGET/"
+
+# Step 2a (examples/swift-ios-app ONLY): install the instruction-only iOS skill.
+# Keep an existing skill (directory, file or symlink) and refuse to write through
+# a symlinked .agents or .agents/skills parent. Failures are reported, not hidden.
+if [ "$EXAMPLE" = 'swift-ios-app' ]; then
+  SKILL_DST="$TARGET/.agents/skills/ios-development"
+  if [ -L "$TARGET/.agents" ] || [ -L "$TARGET/.agents/skills" ]; then
+    echo "SKIPPED: ios-development was not installed; skill parent is a symlink. Adopt manually." >&2
+  elif [ -e "$SKILL_DST" ] || [ -L "$SKILL_DST" ]; then
+    echo "KEPT existing $SKILL_DST; contents unverified. Compare with diff -r (see §3)." >&2
+  else
+    mkdir -p "$TARGET/.agents/skills" \
+      && cp -a .agents/skills/ios-development "$SKILL_DST" \
+      || { echo "FAILED to install ios-development skill" >&2; exit 1; }
+  fi
+fi
 
 # Step 2b (by hand): merge the two .vscode/settings.json — see below.
 # There is no command for this. Both files are JSONC, so jq cannot parse them.
@@ -82,6 +104,13 @@ cd "$TARGET"
 git init  # if not already initialized
 git submodule add https://github.com/qtmleap/biome-plugins.git biome-plugins
 ```
+
+If the target already has `AGENTS.md`, merge the `development-orchestration`
+block from the shared [AGENTS.md](AGENTS.md) into it by hand. When refreshing an
+existing copy, replace that marked block instead of appending it again. Preserve
+project-specific instructions and the managed commit-policy blocks installed by
+CommitGuard. The shared file contains only the development routine; it does not
+duplicate CommitGuard's managed policy.
 
 **Step 2b, in detail.** An example's `.vscode/settings.json` carries only
 stack-specific keys — ten to twelve of them, the `[typescript]` / `[python]` /
@@ -104,10 +133,12 @@ for downstream users.
 
 ---
 
-## 3. Root files (language-agnostic, always copied)
+## 3. Root files (language-agnostic shared configuration)
 
 | File | Purpose |
 | --- | --- |
+| `AGENTS.md` | Portable parallel-development, verification, Tailscale preview, UI/store screenshot, ASC tool, named review routing (LocalGPT / Claude Code / LocalMCP / Codex), and App Review follow-up policy. Copy when absent; merge the marked block into existing project instructions. |
+| `.agents/skills/ios-development/` | Instruction-only native iOS/iPadOS workflow, test policy, release policy (TestFlight / submission / launch), and App Review follow-up reference. Copied only for `swift-ios-app` by Step 2a; see adoption and refresh below. |
 | `.codex/config.toml` | Shared gateway/model template. Copy only this file into the target root; credentials and session state are never copied. |
 | `.editorconfig` | Indent, EOL, charset. 2-space, LF, UTF-8. `ts/tsx/css/json` use single quotes. |
 | `.gitattributes` | Force LF on all text files. Marks lockfiles and `*.gen.ts` as `linguist-generated`. |
@@ -118,6 +149,41 @@ for downstream users.
 
 Root `.gitignore` and `LICENSE` and `README.md` are for maintaining this
 repository itself and are not copied into downstream projects.
+
+### Native iOS skill adoption and refresh
+
+Codex discovers repository skills in `.agents/skills`; see the
+[official skills documentation](https://learn.chatgpt.com/docs/build-skills).
+After Step 2a, invoke `$ios-development`, or tell another agent to read
+`.agents/skills/ios-development/SKILL.md` explicitly. This does not rely on
+Claude discovering that directory or write to mounted `.claude`/`.codex` state.
+
+Step 2a keeps existing skills and reports symlinked parent directories for manual
+adoption. For an existing project, merge the shared AGENTS block as described in
+section 2 as well. Before refreshing a skill, run from the root of this checkout
+with `TARGET` set to the target project:
+`diff -r .agents/skills/ios-development "$TARGET/.agents/skills/ios-development"`.
+Merge explicitly, preserve local edits and symlinks, and record the source Git
+revision with the project's existing setup notes. There is no automatic sync.
+
+Future App Review submissions get a monitor and scoped rejection follow-up per
+`references/app-review-followup.md`; the template installs no jobs and adoption
+grants no Apple-write authority. Existing copies must explicitly merge the new
+references, `SKILL.md` and the AGENTS block (including review routing); nothing
+autosyncs. Include `references/release-policy.md` when merging. Release-policy
+adoption grants no Apple write, notification or release authority.
+
+The shared AGENTS block also covers topic-session reuse, bounded review requests
+and evidence reuse. When the discovered Claude MCP supports review-session
+resume, agents use its explicit review/resume fields and a native diff manifest.
+The template installs no runtime engine; it does not infer resume support or
+provider cache savings from a job receipt. Usage and cache evidence must come
+from the actual tool, with invocation and cumulative figures kept distinct.
+
+UI mock tooling is optional. If a project already uses a mock-first workflow and
+mock viewer, agents read and follow it; the mock-diff plugin lives in
+`qtmleap/claude-plugins`, is not duplicated here, and is not required to be
+installed.
 
 ---
 
@@ -334,7 +400,8 @@ Rules for any agent modifying this repository:
 
    An example directory is still not a whole project on its own: the root
    shared files of §3 have no per-example copies. A complete project is Step 1
-   **and** Step 2 together, never Step 2 alone.
+   **and** Step 2 together, never Step 2 alone. For `swift-ios-app`, Step 2 includes
+   the shared skill adoption in Step 2a.
 
 2. **Root = language-agnostic. Per-example = runtime-dependent.** If a config
    file's contents would be byte-identical across every conceivable example,
@@ -351,7 +418,7 @@ Rules for any agent modifying this repository:
    stack-scoped. The root `.vscode/settings.json` defines only JSON/YAML
    formatters and general editor behavior.
 
-5. **`.editorconfig`, `.gitattributes`, `.commitlintrc.yaml`, `.actrc` are
+5. **`AGENTS.md`, `.editorconfig`, `.gitattributes`, `.commitlintrc.yaml`, `.actrc` are
    root-only.** Do not duplicate these files inside example folders under any
    circumstance.
 
@@ -374,10 +441,22 @@ Rules for any agent modifying this repository:
    two servers in every session. Do not reinstate a repository-local
    `.mcp.json`; if a plugin is missing something, fix the plugin.
 
-   `playwright-mcp.config.json` is the one file that stays, and it is not a
-   server: it is per-project browser settings that the plugin reads when it is
-   present. It is configuration for a tool, in the same category as
-   `.editorconfig`.
+   Instruction-only skill sources are allowed at the root under `.agents/skills/`
+   (currently `ios-development`). They hold no scripts, runners, servers or
+   dependencies, are tracked and portable, and live only there: no per-example
+   copies, none inside ignored or mounted `.codex/` or `.claude/`, no symlinks.
+   This runtime-specific source is a scoped exception to rule 2; it is loaded and
+   copied only when the native iOS example is selected. Tooling, servers and
+   roles stay in the plugins.
+
+   Root `AGENTS.md` is allowed as portable shared policy text. Keep it independent
+   of host-specific paths and installed tool state; discover capabilities on the
+   execution host. Agent implementations, role prompts, servers and launchers
+   continue to live in the plugins.
+
+   The shared `playwright-mcp.config.json` contains per-project browser settings
+   that the plugin reads when it is present. It is configuration for a tool, in
+   the same category as `.editorconfig`.
 
 ---
 
