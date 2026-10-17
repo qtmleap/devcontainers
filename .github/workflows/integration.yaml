@@ -23,6 +23,15 @@ permissions:
 #   - Swift on Linux                              → swift build + test + swift-format
 
 jobs:
+  ci-change-scope:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci-change-scope.yaml
+    with:
+      doc-paths: '[".agents/skills/ios-development/SKILL.md",".agents/skills/ios-development/references/app-review-followup.md",".agents/skills/ios-development/references/release-policy.md",".agents/skills/ios-development/references/testing-policy.md","AGENTS.md","CLAUDE.md","LICENSE","README.md","docs/development/ci-change-scope.md"]'
+      doc-prefixes: '[]'
+      runner: '["self-hosted","ubuntu-latest"]'
+
   commitlint:
     name: Commit Lint
     runs-on: [self-hosted, docker]
@@ -59,8 +68,10 @@ jobs:
   # ============================================================================
 
   node-examples:
+    if: ${{ !cancelled() && (true) }}
+    needs: ["ci-change-scope"]
     name: Verify ${{ matrix.example }}
-    runs-on: [self-hosted, docker]
+    runs-on: ${{ fromJSON((needs['ci-change-scope'].result == 'success' && needs['ci-change-scope'].outputs.docs_only == 'true') && '["self-hosted","ubuntu-latest"]' || '["self-hosted","docker"]') }}
     strategy:
       fail-fast: false
       matrix:
@@ -75,12 +86,15 @@ jobs:
         working-directory: examples/${{ matrix.example }}
     steps:
       - uses: actions/checkout@v5
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
           submodules: recursive
       - uses: oven-sh/setup-bun@v2
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
           bun-version: latest
       - name: Cache Bun install
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
@@ -88,53 +102,86 @@ jobs:
           restore-keys: |
             bun-${{ runner.os }}-${{ matrix.example }}-
       - name: Install dependencies
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: bun install --ignore-scripts
       - name: Biome check
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: bunx --bun biome check
       - name: TypeScript check
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: bun run typecheck
       - name: Run tests
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: bun test
 
   # Prisma monorepo has its own multi-workspace structure — verify separately.
+      - name: Docs-only exemption
+        if: ${{ needs['ci-change-scope'].result == 'success' && needs['ci-change-scope'].outputs.docs_only == 'true' }}
+        shell: bash
+        working-directory: .
+        env:
+          CI_CHANGE_REASON: ${{ needs['ci-change-scope'].outputs.reason }}
+        run: |
+          printf '%s\n' "$CI_CHANGE_REASON" >> "$GITHUB_STEP_SUMMARY"
   hono-vite-react-workers-prisma:
+    if: ${{ !cancelled() && (true) }}
+    needs: ["ci-change-scope"]
     name: Verify hono-vite-react-workers-prisma
-    runs-on: [self-hosted, docker]
+    runs-on: ${{ fromJSON((needs['ci-change-scope'].result == 'success' && needs['ci-change-scope'].outputs.docs_only == 'true') && '["self-hosted","ubuntu-latest"]' || '["self-hosted","docker"]') }}
     defaults:
       run:
         working-directory: examples/hono-vite-react-workers-prisma
     steps:
       - uses: actions/checkout@v5
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
           submodules: recursive
       - uses: oven-sh/setup-bun@v2
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
           bun-version: latest
       - name: Cache Bun install
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-prisma-${{ hashFiles('examples/hono-vite-react-workers-prisma/package.json') }}
       - name: Install dependencies
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: bun install --ignore-scripts
       - name: Generate Prisma client
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: bun run --cwd workers/db generate
       - name: Biome check
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: bunx --bun biome check
       - name: TypeScript check
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: bun run --filter '@app/*' typecheck
       - name: Vite build (app worker)
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: bun run --cwd workers/app build
       - name: Run tests
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: bun test
 
   # ============================================================================
   # Python (uv) examples
   # ============================================================================
 
+      - name: Docs-only exemption
+        if: ${{ needs['ci-change-scope'].result == 'success' && needs['ci-change-scope'].outputs.docs_only == 'true' }}
+        shell: bash
+        working-directory: .
+        env:
+          CI_CHANGE_REASON: ${{ needs['ci-change-scope'].outputs.reason }}
+        run: |
+          printf '%s\n' "$CI_CHANGE_REASON" >> "$GITHUB_STEP_SUMMARY"
   python-examples:
+    if: ${{ !cancelled() && (true) }}
+    needs: ["ci-change-scope"]
     name: Verify ${{ matrix.example }}
-    runs-on: [self-hosted, docker]
+    runs-on: ${{ fromJSON((needs['ci-change-scope'].result == 'success' && needs['ci-change-scope'].outputs.docs_only == 'true') && '["self-hosted","ubuntu-latest"]' || '["self-hosted","docker"]') }}
     strategy:
       fail-fast: false
       matrix:
@@ -144,57 +191,89 @@ jobs:
         working-directory: examples/${{ matrix.example }}
     steps:
       - uses: actions/checkout@v5
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
       - uses: astral-sh/setup-uv@v6
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
           enable-cache: true
       - name: Install dependencies
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: uv sync
       - name: Ruff check
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: uvx ruff check
       - name: Ruff format check
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: uvx ruff format --check
       - name: mypy
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: uv run mypy .
         # CUDA-typed extensions (torch, cupy) often lack complete stubs.
         continue-on-error: ${{ matrix.example == 'python-cuda' }}
       - name: pytest
-        if: matrix.example == 'python'
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') && (matrix.example == 'python') }}
         run: uv run pytest
 
   # ============================================================================
   # Rust
   # ============================================================================
 
+      - name: Docs-only exemption
+        if: ${{ needs['ci-change-scope'].result == 'success' && needs['ci-change-scope'].outputs.docs_only == 'true' }}
+        shell: bash
+        working-directory: .
+        env:
+          CI_CHANGE_REASON: ${{ needs['ci-change-scope'].outputs.reason }}
+        run: |
+          printf '%s\n' "$CI_CHANGE_REASON" >> "$GITHUB_STEP_SUMMARY"
   rust:
+    if: ${{ !cancelled() && (true) }}
+    needs: ["ci-change-scope"]
     name: Verify rust
-    runs-on: [self-hosted, docker]
+    runs-on: ${{ fromJSON((needs['ci-change-scope'].result == 'success' && needs['ci-change-scope'].outputs.docs_only == 'true') && '["self-hosted","ubuntu-latest"]' || '["self-hosted","docker"]') }}
     defaults:
       run:
         working-directory: examples/rust
     steps:
       - uses: actions/checkout@v5
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
       - uses: dtolnay/rust-toolchain@stable
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
           workspaces: examples/rust
       - name: cargo fmt
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: cargo fmt --all -- --check
       - name: cargo clippy
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: cargo clippy --all-targets --all-features -- -D warnings
       - name: cargo test
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: cargo test --all-features --workspace
 
   # ============================================================================
   # Swift on Linux
   # ============================================================================
 
+      - name: Docs-only exemption
+        if: ${{ needs['ci-change-scope'].result == 'success' && needs['ci-change-scope'].outputs.docs_only == 'true' }}
+        shell: bash
+        working-directory: .
+        env:
+          CI_CHANGE_REASON: ${{ needs['ci-change-scope'].outputs.reason }}
+        run: |
+          printf '%s\n' "$CI_CHANGE_REASON" >> "$GITHUB_STEP_SUMMARY"
   swift:
+    if: ${{ !cancelled() && (true) }}
+    needs: ["ci-change-scope"]
     name: Verify swift
-    runs-on: [self-hosted, docker]
+    runs-on: ${{ fromJSON((needs['ci-change-scope'].result == 'success' && needs['ci-change-scope'].outputs.docs_only == 'true') && '["self-hosted","ubuntu-latest"]' || '["self-hosted","docker"]') }}
     container:
-      image: swift:6.0-noble
+      image: ${{ fromJSON((needs['ci-change-scope'].result == 'success' && needs['ci-change-scope'].outputs.docs_only == 'true') && '""' || '"swift:6.0-noble"') }}
     defaults:
       run:
         working-directory: examples/swift
@@ -202,12 +281,15 @@ jobs:
       # Runs before checkout, so examples/swift doesn't exist yet — override
       # the working-directory default to the container root.
       - name: Install Node.js (for GHA action runtime in swift container)
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         working-directory: /
         run: |
           apt-get update
           apt-get install -y --no-install-recommends nodejs
       - uses: actions/checkout@v5
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
       - name: Cache SPM
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         uses: actions/cache@v4
         with:
           path: |
@@ -217,18 +299,29 @@ jobs:
           restore-keys: |
             spm-linux-swift6-
       - name: swift-format lint
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: |
           if [ -d Sources ] && [ -n "$(find Sources -name '*.swift' 2>/dev/null | head -1)" ]; then
             swift-format lint --recursive --strict Sources
           fi
       - name: swift build
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: swift build --build-tests
       - name: swift test
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: swift test --parallel
 
   # swift-ios-tweak's build needs Theos + iOS SDK (~2GB); we skip that here and
   # only lint the Swift sources. The example's own workflow guards the Theos
   # steps behind a Makefile+control existence check.
+      - name: Docs-only exemption
+        if: ${{ needs['ci-change-scope'].result == 'success' && needs['ci-change-scope'].outputs.docs_only == 'true' }}
+        shell: bash
+        working-directory: .
+        env:
+          CI_CHANGE_REASON: ${{ needs['ci-change-scope'].outputs.reason }}
+        run: |
+          printf '%s\n' "$CI_CHANGE_REASON" >> "$GITHUB_STEP_SUMMARY"
   swift-ios-tweak:
     name: Verify swift-ios-tweak
     runs-on: [self-hosted, docker]
@@ -259,8 +352,10 @@ jobs:
   # the worker without hitting the Cloudflare API.
 
   docker-build:
+    if: ${{ !cancelled() && (true) }}
+    needs: ["ci-change-scope"]
     name: Docker build ${{ matrix.example }}
-    runs-on: [self-hosted, docker]
+    runs-on: ${{ fromJSON((needs['ci-change-scope'].result == 'success' && needs['ci-change-scope'].outputs.docs_only == 'true') && '["self-hosted","ubuntu-latest"]' || '["self-hosted","docker"]') }}
     strategy:
       fail-fast: false
       matrix:
@@ -273,6 +368,7 @@ jobs:
           - swift
     steps:
       - uses: actions/checkout@v5
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
           submodules: recursive
       # Lockfiles are gitignored for the python/rust templates so downstream
@@ -280,21 +376,23 @@ jobs:
       # `uv sync --frozen` / `cargo build --locked`. Generate them here so
       # the docker build has a lockfile to consume.
       - name: Setup uv (python examples)
-        if: startsWith(matrix.example, 'python')
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') && (startsWith(matrix.example, 'python')) }}
         uses: astral-sh/setup-uv@v6
       - name: Generate uv.lock (python examples)
-        if: startsWith(matrix.example, 'python')
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') && (startsWith(matrix.example, 'python')) }}
         working-directory: examples/${{ matrix.example }}
         run: uv lock
       - name: Setup Rust toolchain (rust)
-        if: matrix.example == 'rust'
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') && (matrix.example == 'rust') }}
         uses: dtolnay/rust-toolchain@stable
       - name: Generate Cargo.lock (rust)
-        if: matrix.example == 'rust'
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') && (matrix.example == 'rust') }}
         working-directory: examples/${{ matrix.example }}
         run: cargo generate-lockfile
       - uses: docker/setup-buildx-action@v3
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
       - name: Build image (no push)
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         uses: docker/build-push-action@v6
         with:
           context: examples/${{ matrix.example }}
@@ -311,9 +409,19 @@ jobs:
   # Build every devcontainer image that creates its own user here to catch it.
   # The swift-ios-tweak images are excluded: Theos + SDKs + Ghidra take 20+
   # minutes, and those examples carry their own devcontainer-build workflow.
+      - name: Docs-only exemption
+        if: ${{ needs['ci-change-scope'].result == 'success' && needs['ci-change-scope'].outputs.docs_only == 'true' }}
+        shell: bash
+        working-directory: .
+        env:
+          CI_CHANGE_REASON: ${{ needs['ci-change-scope'].outputs.reason }}
+        run: |
+          printf '%s\n' "$CI_CHANGE_REASON" >> "$GITHUB_STEP_SUMMARY"
   devcontainer-build:
+    if: ${{ !cancelled() && (true) }}
+    needs: ["ci-change-scope"]
     name: Devcontainer build ${{ matrix.example }}
-    runs-on: [self-hosted, docker]
+    runs-on: ${{ fromJSON((needs['ci-change-scope'].result == 'success' && needs['ci-change-scope'].outputs.docs_only == 'true') && '["self-hosted","ubuntu-latest"]' || '["self-hosted","docker"]') }}
     strategy:
       fail-fast: false
       matrix:
@@ -323,8 +431,11 @@ jobs:
           - swift-ios-app
     steps:
       - uses: actions/checkout@v5
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
       - uses: docker/setup-buildx-action@v3
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
       - name: Build devcontainer image (no push)
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         uses: docker/build-push-action@v6
         with:
           context: examples/${{ matrix.example }}/.devcontainer
@@ -333,9 +444,19 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.example }}-devcontainer
           cache-to: type=gha,mode=max,scope=${{ matrix.example }}-devcontainer
 
+      - name: Docs-only exemption
+        if: ${{ needs['ci-change-scope'].result == 'success' && needs['ci-change-scope'].outputs.docs_only == 'true' }}
+        shell: bash
+        working-directory: .
+        env:
+          CI_CHANGE_REASON: ${{ needs['ci-change-scope'].outputs.reason }}
+        run: |
+          printf '%s\n' "$CI_CHANGE_REASON" >> "$GITHUB_STEP_SUMMARY"
   wrangler-dryrun:
+    if: ${{ !cancelled() && (true) }}
+    needs: ["ci-change-scope"]
     name: Wrangler dry-run ${{ matrix.example }}
-    runs-on: [self-hosted, docker]
+    runs-on: ${{ fromJSON((needs['ci-change-scope'].result == 'success' && needs['ci-change-scope'].outputs.docs_only == 'true') && '["self-hosted","ubuntu-latest"]' || '["self-hosted","docker"]') }}
     strategy:
       fail-fast: false
       matrix:
@@ -354,22 +475,27 @@ jobs:
         working-directory: examples/${{ matrix.example }}
     steps:
       - uses: actions/checkout@v5
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
           submodules: recursive
       - uses: oven-sh/setup-bun@v2
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
           bun-version: latest
       - name: Cache Bun install
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ matrix.example }}-deploy-${{ hashFiles(format('examples/{0}/package.json', matrix.example)) }}
       - name: Install dependencies
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: bun install --ignore-scripts
       - name: Pre-deploy build
-        if: matrix.build != ''
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') && (matrix.build != '') }}
         run: ${{ matrix.build }}
       - name: Wrangler dry-run
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         env:
           CLOUDFLARE_API_TOKEN: dry-run-not-real
           CLOUDFLARE_ACCOUNT_ID: dry-run-not-real
@@ -378,48 +504,91 @@ jobs:
   # The Prisma monorepo needs Prisma client generated and app worker built
   # before wrangler can bundle the api / db / app workers. Verify by running
   # `wrangler deploy --dry-run` on each worker in turn.
+      - name: Docs-only exemption
+        if: ${{ needs['ci-change-scope'].result == 'success' && needs['ci-change-scope'].outputs.docs_only == 'true' }}
+        shell: bash
+        working-directory: .
+        env:
+          CI_CHANGE_REASON: ${{ needs['ci-change-scope'].outputs.reason }}
+        run: |
+          printf '%s\n' "$CI_CHANGE_REASON" >> "$GITHUB_STEP_SUMMARY"
   wrangler-dryrun-prisma:
+    if: ${{ !cancelled() && (true) }}
+    needs: ["ci-change-scope"]
     name: Wrangler dry-run hono-vite-react-workers-prisma
-    runs-on: [self-hosted, docker]
+    runs-on: ${{ fromJSON((needs['ci-change-scope'].result == 'success' && needs['ci-change-scope'].outputs.docs_only == 'true') && '["self-hosted","ubuntu-latest"]' || '["self-hosted","docker"]') }}
     defaults:
       run:
         working-directory: examples/hono-vite-react-workers-prisma
     steps:
       - uses: actions/checkout@v5
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
           submodules: recursive
       - uses: oven-sh/setup-bun@v2
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
           bun-version: latest
       - name: Cache Bun install
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-prisma-deploy-${{ hashFiles('examples/hono-vite-react-workers-prisma/package.json') }}
       - name: Install dependencies
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: bun install --ignore-scripts
       - name: Generate Prisma client
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: bun run --cwd workers/db generate
       - name: Build app worker
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         run: bun run --cwd workers/app build
       # Each worker's wrangler.toml points at `tsconfig = "tsconfig.json"`,
       # which wrangler resolves relative to the process CWD (not the config
       # file's dir). Run each dry-run from inside its own worker directory.
       - name: Wrangler dry-run (db)
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         working-directory: examples/hono-vite-react-workers-prisma/workers/db
         env:
           CLOUDFLARE_API_TOKEN: dry-run-not-real
           CLOUDFLARE_ACCOUNT_ID: dry-run-not-real
         run: bunx wrangler deploy --dry-run --outdir=dist
       - name: Wrangler dry-run (api)
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         working-directory: examples/hono-vite-react-workers-prisma/workers/api
         env:
           CLOUDFLARE_API_TOKEN: dry-run-not-real
           CLOUDFLARE_ACCOUNT_ID: dry-run-not-real
         run: bunx wrangler deploy --dry-run --outdir=dist
       - name: Wrangler dry-run (app)
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         working-directory: examples/hono-vite-react-workers-prisma/workers/app
         env:
           CLOUDFLARE_API_TOKEN: dry-run-not-real
           CLOUDFLARE_ACCOUNT_ID: dry-run-not-real
         run: bunx wrangler deploy --dry-run --outdir=dist
+
+      - name: Docs-only exemption
+        if: ${{ needs['ci-change-scope'].result == 'success' && needs['ci-change-scope'].outputs.docs_only == 'true' }}
+        shell: bash
+        working-directory: .
+        env:
+          CI_CHANGE_REASON: ${{ needs['ci-change-scope'].outputs.reason }}
+        run: |
+          printf '%s\n' "$CI_CHANGE_REASON" >> "$GITHUB_STEP_SUMMARY"
+
+  ci-policy-tests:
+    name: CI Scope Policy
+    runs-on: [self-hosted, ubuntu-latest]
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Verify change scope decisions
+        run: node --test scripts/tests/test-ci-change-scope.mjs
