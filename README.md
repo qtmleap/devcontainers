@@ -285,7 +285,10 @@ There are no separate seats to start and nothing to attach to.
 
 The examples forward `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`,
 `OPENAI_API_KEY`, and `OPENAI_BASE_URL` through `remoteEnv`.
-`CLAUDE_CODE_AUTO_MODE_SERVER` is set to `"0"` there as well.
+`CLAUDE_CODE_AUTO_MODE_SERVER` is set to `"0"` there as well. They also set
+`ANTHROPIC_MODEL` there, defaulting to `claude-sonnet-5-5` so Claude Code
+starts on Sonnet 5.5. Defining `ANTHROPIC_MODEL` on the host overrides the
+default, and `--model` or `/model` still override it for a single session.
 
 Each example sets `remoteEnv.CODEX_HOME` to `${containerWorkspaceFolder}/.codex`.
 Dev Containers expands the variable to the current workspace root, so no
@@ -293,7 +296,7 @@ fixed container path is required. The existing `containerEnv.CODEX_HOME` entries
 use the same variable. For these Compose-based examples, `remoteEnv` is the
 active VS Code environment setting; container-wide variables belong in Compose. Codex therefore reads the
 copied `.codex/config.toml` as its user configuration, including the `gateway`
-provider, `codex,gpt-6.1-sol` model, and `low` reasoning effort. The gateway
+provider, `gpt-6.1-sol` model, and `xhigh` reasoning effort. The gateway
 provider reads its API key from `OPENAI_API_KEY`; no key is stored in the
 template. A command-line model override can still override this default.
 
