@@ -10,6 +10,7 @@
     "CLAUDE_CODE_AUTO_MODE_SERVER": "0",
     "ANTHROPIC_BASE_URL": "${localEnv:ANTHROPIC_BASE_URL}",
     "ANTHROPIC_AUTH_TOKEN": "${localEnv:ANTHROPIC_AUTH_TOKEN}",
+    "ANTHROPIC_MODEL": "${localEnv:ANTHROPIC_MODEL:claude-sonnet-5-5}",
     "HF_TOKEN": "${localEnv:HF_TOKEN}",
     "WANDB_API_KEY": "${localEnv:WANDB_API_KEY}",
     "WANDB_BASE_URL": "${localEnv:WANDB_BASE_URL}",
