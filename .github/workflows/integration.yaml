@@ -589,6 +589,6 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Verify change scope decisions
         run: node --test scripts/tests/test-ci-change-scope.mjs
