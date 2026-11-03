@@ -1,5 +1,16 @@
 #!/bin/zsh
 
+# Keep oh-my-zsh's completion cache from being group/other-writable.
+# Processes started via `docker exec` can run with umask 0000, so the
+# cache/completions directory oh-my-zsh creates on first run ends up 777 and
+# compinit refuses to load completions ("Insecure completion-dependent
+# directories"). Creating it first with sane permissions lets oh-my-zsh's own
+# `mkdir -p` reuse it as-is.
+if [ -d "$HOME/.oh-my-zsh" ]; then
+  mkdir -p "$HOME/.oh-my-zsh/cache/completions"
+  chmod -R go-w "$HOME/.oh-my-zsh/cache"
+fi
+
 sudo chown -R $(whoami):$(whoami) \
   node_modules \
   workers/api/node_modules \
