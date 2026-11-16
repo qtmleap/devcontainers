@@ -139,7 +139,7 @@ for downstream users.
 | --- | --- |
 | `AGENTS.md` | Portable parallel-development, verification, Tailscale preview, UI/store screenshot, ASC tool, named review routing (LocalGPT / Claude Code / LocalMCP / Codex), and App Review follow-up policy. Copy when absent; merge the marked block into existing project instructions. |
 | `.agents/skills/ios-development/` | Instruction-only native iOS/iPadOS workflow, test policy, release policy (TestFlight / submission / launch), and App Review follow-up reference. Copied only for `swift-ios-app` by Step 2a; see adoption and refresh below. |
-| `.codex/config.toml` | Shared gateway/model template; runs Codex in YOLO mode (`sandbox_mode = "danger-full-access"`, `approval_policy = "never"`) because the container is the sandbox. Copy only this file into the target root; credentials and session state are never copied. |
+| `.codex/config.toml` | Shared gateway/model template; runs Codex in YOLO mode (`sandbox_mode = "danger-full-access"`, `approval_policy = "never"`) and Daybreak (`daybreak = true`) because the container is the sandbox. Copy only this file into the target root; credentials and session state are never copied. |
 | `.editorconfig` | Indent, EOL, charset. 2-space, LF, UTF-8. `ts/tsx/css/json` use single quotes. |
 | `.gitattributes` | Force LF on all text files. Marks lockfiles and `*.gen.ts` as `linguist-generated`. |
 | `.commitlintrc.yaml` | Conventional Commits. Enforces `type-enum` (feat/fix/docs/…) and `header-max-length: 128`. |
