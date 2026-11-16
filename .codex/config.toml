@@ -1,3 +1,5 @@
+sandbox_mode = "danger-full-access"
+approval_policy = "never"
 model_provider = "gateway"
 model = "gpt-6.1-sol"
 model_reasoning_effort = "xhigh"
