@@ -23,6 +23,8 @@ permissions:
 #   - Swift on Linux                              → swift build + test + swift-format
 
 jobs:
+  # Self-hosted runners can retain skip-worktree entries from prior sparse
+  # jobs. Materialize tracked files after checkout before using the workspace.
   ci-change-scope:
     permissions:
       contents: read
@@ -39,6 +41,9 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      - name: Restore tracked files on the reused runner
+        working-directory: .
+        run: git checkout-index --all --force --ignore-skip-worktree-bits
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
@@ -89,6 +94,10 @@ jobs:
         if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
           submodules: recursive
+      - name: Restore tracked files on the reused runner
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
+        working-directory: .
+        run: git checkout-index --all --force --ignore-skip-worktree-bits
       - uses: oven-sh/setup-bun@v2
         if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
@@ -136,6 +145,10 @@ jobs:
         if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
           submodules: recursive
+      - name: Restore tracked files on the reused runner
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
+        working-directory: .
+        run: git checkout-index --all --force --ignore-skip-worktree-bits
       - uses: oven-sh/setup-bun@v2
         if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
@@ -192,6 +205,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
+      - name: Restore tracked files on the reused runner
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
+        working-directory: .
+        run: git checkout-index --all --force --ignore-skip-worktree-bits
       - uses: astral-sh/setup-uv@v6
         if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
@@ -237,6 +254,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
+      - name: Restore tracked files on the reused runner
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
+        working-directory: .
+        run: git checkout-index --all --force --ignore-skip-worktree-bits
       - uses: dtolnay/rust-toolchain@stable
         if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
@@ -288,6 +309,10 @@ jobs:
           apt-get install -y --no-install-recommends nodejs
       - uses: actions/checkout@v5
         if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
+      - name: Restore tracked files on the reused runner
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
+        working-directory: .
+        run: git checkout-index --all --force --ignore-skip-worktree-bits
       - name: Cache SPM
         if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         uses: actions/cache@v4
@@ -337,6 +362,9 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends nodejs
       - uses: actions/checkout@v5
+      - name: Restore tracked files on the reused runner
+        working-directory: .
+        run: git checkout-index --all --force --ignore-skip-worktree-bits
       - name: swift-format lint
         run: |
           if [ -d Sources ] && [ -n "$(find Sources -name '*.swift' 2>/dev/null | head -1)" ]; then
@@ -371,6 +399,10 @@ jobs:
         if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
           submodules: recursive
+      - name: Restore tracked files on the reused runner
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
+        working-directory: .
+        run: git checkout-index --all --force --ignore-skip-worktree-bits
       # Lockfiles are gitignored for the python/rust templates so downstream
       # projects regenerate their own, but the Dockerfiles pin to them via
       # `uv sync --frozen` / `cargo build --locked`. Generate them here so
@@ -432,6 +464,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
+      - name: Restore tracked files on the reused runner
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
+        working-directory: .
+        run: git checkout-index --all --force --ignore-skip-worktree-bits
       - uses: docker/setup-buildx-action@v3
         if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
       - name: Build devcontainer image (no push)
@@ -478,6 +514,10 @@ jobs:
         if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
           submodules: recursive
+      - name: Restore tracked files on the reused runner
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
+        working-directory: .
+        run: git checkout-index --all --force --ignore-skip-worktree-bits
       - uses: oven-sh/setup-bun@v2
         if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
@@ -525,6 +565,10 @@ jobs:
         if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
           submodules: recursive
+      - name: Restore tracked files on the reused runner
+        if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
+        working-directory: .
+        run: git checkout-index --all --force --ignore-skip-worktree-bits
       - uses: oven-sh/setup-bun@v2
         if: ${{ (needs['ci-change-scope'].result != 'success' || needs['ci-change-scope'].outputs.docs_only != 'true') }}
         with:
@@ -587,6 +631,9 @@ jobs:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
+      - name: Restore tracked files on the reused runner
+        working-directory: .
+        run: git checkout-index --all --force --ignore-skip-worktree-bits
       - uses: actions/setup-node@v5
         with:
           node-version: "24.22.1"
