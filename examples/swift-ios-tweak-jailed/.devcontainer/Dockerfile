@@ -3,6 +3,9 @@
 # Bundles Theos + iOS cross-compile toolchain + reverse engineering suite
 # (radare2, jadx, Ghidra, ipsw, class-dump, libimobiledevice).
 FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
+
+# The Codex CLI feature uses this directory as its installer CODEX_HOME.
+RUN mkdir -p /usr/local/share/codex
 ARG _REMOTE_USER_HOME=/home/vscode
 
 # ── Reverse engineering tools + Theos build dependencies ──

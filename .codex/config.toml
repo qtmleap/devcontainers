@@ -2,12 +2,11 @@ sandbox_mode = "danger-full-access"
 approval_policy = "never"
 daybreak = true
 model_provider = "gateway"
-model = "gpt-6.1-sol"
+model = "gpt-6.2-sol"
 model_reasoning_effort = "xhigh"
 
 [model_providers.gateway]
 name = "gateway"
-model = "gpt-6.1-sol"
 base_url = "https://ai.qleap.jp/v1"
 env_key = "OPENAI_API_KEY"
 wire_api = "responses"

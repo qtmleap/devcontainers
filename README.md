@@ -296,7 +296,7 @@ fixed container path is required. The existing `containerEnv.CODEX_HOME` entries
 use the same variable. For these Compose-based examples, `remoteEnv` is the
 active VS Code environment setting; container-wide variables belong in Compose. Codex therefore reads the
 copied `.codex/config.toml` as its user configuration, including the `gateway`
-provider, `gpt-6.1-sol` model, and `xhigh` reasoning effort. The gateway
+provider, `gpt-6.2-sol` model, and `xhigh` reasoning effort. The gateway
 provider reads its API key from `OPENAI_API_KEY`; no key is stored in the
 template. A command-line model override can still override this default.
 
