@@ -3,9 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import classifier from '../.generated/ci-change-scope.cjs'
-
-const { classifyChangeScope } = classifier
+import { classifyChangeScope } from '../.generated/ci-change-scope.mjs'
 
 const yaml = readFileSync(new URL('../../.github/workflows/ci-change-scope.yaml', import.meta.url), 'utf8')
 
@@ -118,7 +116,7 @@ test('workflow shape: reusable, least privilege and checkout without persisted c
   assert.doesNotMatch(yaml, /secrets\.|^\s*concurrency:|continue-on-error/m)
   assert.match(yaml, /actions\/checkout@v5[\s\S]*persist-credentials: false/)
   assert.match(yaml, /bun build scripts[/]ci-change-scope\.ts/)
-  assert.match(yaml, /script: await require\('\.[/]scripts[/]\.generated[/]ci-change-scope\.cjs'\)\.classifyChangeScope\(\{ github, context, core \}\)/)
+  assert.match(yaml, /await \(await import\(moduleUrl\.href\)\)\.classifyChangeScope\(/)
   assert.match(yaml, /actions\/github-script@v7/)
 })
 

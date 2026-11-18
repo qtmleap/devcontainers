@@ -52,7 +52,7 @@ jobs:
           sparse-checkout-cone-mode: false
       - uses: oven-sh/setup-bun@v2
       - name: Transpile change scope classifier
-        run: bun build scripts/ci-change-scope.ts --target=node --format=cjs --outfile=scripts/.generated/ci-change-scope.cjs
+        run: bun build scripts/ci-change-scope.ts --target=node --format=esm --outfile=scripts/.generated/ci-change-scope.mjs
       - id: scope
         uses: actions/github-script@v7
         env:
@@ -60,4 +60,7 @@ jobs:
           DOC_PREFIXES: ${{ inputs.doc-prefixes }}
           FORCE_HEAVY: ${{ inputs.force-heavy }}
         with:
-          script: await require('./scripts/.generated/ci-change-scope.cjs').classifyChangeScope({ github, context, core })
+          script: |
+            const { pathToFileURL } = await import('node:url')
+            const moduleUrl = pathToFileURL(process.cwd() + '/scripts/.generated/ci-change-scope.mjs')
+            await (await import(moduleUrl.href)).classifyChangeScope({ github, context, core })
