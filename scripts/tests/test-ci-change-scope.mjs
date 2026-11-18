@@ -115,6 +115,7 @@ test('workflow shape: reusable, least privilege and checkout without persisted c
   assert.doesNotMatch(yaml, /pull-requests:/)
   assert.doesNotMatch(yaml, /secrets\.|^\s*concurrency:|continue-on-error/m)
   assert.match(yaml, /actions\/checkout@v5[\s\S]*persist-credentials: false/)
+  assert.match(yaml, /path: \.ci-scope-source/)
   assert.match(yaml, /bun build scripts[/]ci-change-scope\.ts/)
   assert.match(yaml, /await \(await import\(moduleUrl\.href\)\)\.classifyChangeScope\(/)
   assert.match(yaml, /actions\/github-script@v7/)

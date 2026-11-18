@@ -2,8 +2,8 @@
 
 `.github/workflows/ci-change-scope.yaml` is a reusable workflow
 (`workflow_call`) that decides whether a change is documentation-only so callers
-can skip heavy test/build jobs. It uses a sparse checkout without persisting
-credentials, transpiles `scripts/ci-change-scope.ts` with Bun, and runs the
+can skip heavy test/build jobs. It uses a separate sparse checkout without
+persisting credentials, transpiles `scripts/ci-change-scope.ts` with Bun, and runs the
 generated ES module through `actions/github-script@v7` with read-only
 GitHub REST calls. Copy the workflow
 and the script together when adopting this classifier in another repository.
