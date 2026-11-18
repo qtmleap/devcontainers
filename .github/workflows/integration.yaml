@@ -590,5 +590,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: "24.22.1"
+      - uses: oven-sh/setup-bun@v2
+      - name: Transpile change scope classifier
+        run: bun build scripts/ci-change-scope.ts --target=node --format=cjs --outfile=scripts/.generated/ci-change-scope.cjs
       - name: Verify change scope decisions
         run: node --test scripts/tests/test-ci-change-scope.mjs

@@ -3,8 +3,9 @@
 `.github/workflows/ci-change-scope.yaml` is a reusable workflow
 (`workflow_call`) that decides whether a change is documentation-only so callers
 can skip heavy test/build jobs. It uses a sparse checkout without persisting
-credentials, then runs `scripts/ci-change-scope.cjs` using
-`actions/github-script@v7` and read-only GitHub REST calls. Copy the workflow
+credentials, transpiles `scripts/ci-change-scope.ts` with Bun, and runs the
+generated CommonJS module through `actions/github-script@v7` with read-only
+GitHub REST calls. Copy the workflow
 and the script together when adopting this classifier in another repository.
 
 ## Contract
@@ -70,8 +71,9 @@ The canonical test suite is maintained in `qtmleap/devcontainers`; copied
 workflows do not require a duplicate test file. From that repository root:
 
 ```sh
+bun build scripts/ci-change-scope.ts --target=node --format=cjs --outfile=scripts/.generated/ci-change-scope.cjs
 node --test scripts/tests/test-ci-change-scope.mjs
 ```
 
-The tests import the classifier directly and execute it with fake
+The tests import the generated module and execute it with fake
 `github`, `context` and `core` objects (no network, no YAML dependency).

@@ -1,4 +1,70 @@
-module.exports = async ({ github, context, core, env = process.env }) => {
+type FileEntry = {
+  filename?: string
+  sha?: string
+  status?: string
+  previous_filename?: string
+}
+
+type CommitRef = { sha?: string }
+type CompareResult = {
+  status: string
+  base_commit?: CommitRef
+  merge_base_commit?: CommitRef
+  total_commits: number
+  commits?: CommitRef[]
+  files?: FileEntry[]
+}
+
+type Repository = { owner: string; repo: string }
+type ScopeInputs = {
+  github: {
+    rest: {
+      repos: {
+        compareCommitsWithBasehead: (params: Repository & {
+          basehead: string
+          per_page: number
+          page: number
+        }) => Promise<{ data: CompareResult }>
+      }
+    }
+  }
+  context: {
+    eventName: string
+    repo: Repository
+    ref: string
+    payload: {
+      action: string
+      pull_request?: {
+        number: number
+        head?: CommitRef
+        base?: CommitRef
+        changed_files: number
+      }
+      before: string
+      after: string
+      ref: string
+      forced: boolean
+    }
+  }
+  core: {
+    setOutput: (name: string, value: string) => void
+    warning: (message: string) => void
+    summary: JobSummary
+  }
+  env?: Record<string, string | undefined>
+}
+
+type JobSummary = {
+  addHeading: (text: string, level: number) => JobSummary
+  addRaw: (text: string) => JobSummary
+  addCodeBlock: (text: string) => JobSummary
+  write: () => Promise<unknown>
+}
+
+type Allowlist = { paths: Set<string>; prefixes: string[] }
+type Decision = { docsOnly: boolean; reason: string; files: string[] }
+
+export async function classifyChangeScope({ github, context, core, env = process.env }: ScopeInputs): Promise<void> {
   const SHA = /^[0-9a-f]{40}$/
   const ZERO = '0'.repeat(40)
   const NAME = /^(?!\.{1,2}(?:\/|$))(?!.*\/\.{1,2}(?:\/|$))[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)*$/
@@ -7,19 +73,19 @@ module.exports = async ({ github, context, core, env = process.env }) => {
     'public', 'static', 'node_modules', 'vendor', 'build', 'dist', 'scripts', 'bin', 'examples',
     'migrations', 'prisma', 'sql', 'signing', 'certs', 'secrets'])
   const MAX_LISTED = 200
-  const heavy = (why) => ({ docsOnly: false, reason: why, files: [] })
-  const safeText = (s, n = 300) => String(s).replace(/[^\x20-\x7e]/g, '?').slice(0, n)
-  const html = (s) => String(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
-  const isInt = (n) => Number.isInteger(n)
-  const denied = (p) => p.split('/').some((s) => DENY.has(s.toLowerCase()))
+  const heavy = (why: string): Decision => ({ docsOnly: false, reason: why, files: [] })
+  const safeText = (s: unknown, n = 300) => String(s).replace(/[^\x20-\x7e]/g, '?').slice(0, n)
+  const html = (s: unknown) => String(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+  const isInt = (n: unknown): n is number => Number.isInteger(n)
+  const denied = (p: string) => p.split('/').some((s) => DENY.has(s.toLowerCase()))
 
-  const parseList = (name, raw) => {
-    let v
+  const parseList = (name: string, raw: string | undefined): string[] => {
+    let v: unknown
     try { v = JSON.parse(raw ?? '[]') } catch { throw new Error(`${name} is not valid JSON`) }
     if (!Array.isArray(v) || v.some((x) => typeof x !== 'string')) throw new Error(`${name} must be a JSON string array`)
     return v
   }
-  const loadAllow = () => {
+  const loadAllow = (): Allowlist => {
     const paths = parseList('doc-paths', env.DOC_PATHS)
     const prefixes = parseList('doc-prefixes', env.DOC_PREFIXES)
     if (!paths.length && !prefixes.length) throw new Error('empty allowlist')
@@ -31,11 +97,12 @@ module.exports = async ({ github, context, core, env = process.env }) => {
     }
     return { paths: new Set(paths), prefixes }
   }
-  const allowed = (allow, name) =>
+  const allowed = (allow: Allowlist, name: string) =>
     NAME.test(name) && !denied(name) &&
     (allow.paths.has(name) || (name.endsWith('.md') && allow.prefixes.some((p) => name.startsWith(p))))
 
-  const classify = (allow, files) => {
+  const classify = (allow: Allowlist, files: FileEntry[]): Decision => {
+    const names: string[] = []
     for (const f of files) {
       const name = f?.filename
       if (typeof name !== 'string') return heavy('unnamed file entry')
@@ -43,15 +110,16 @@ module.exports = async ({ github, context, core, env = process.env }) => {
       if (f.status !== 'added' && f.status !== 'modified') return heavy(`${f.status} file ${JSON.stringify(safeText(name, 100))}`)
       if (f.previous_filename) return heavy('rename metadata present')
       if (!allowed(allow, name)) return heavy(`non-documentation file ${JSON.stringify(safeText(name, 100))}`)
+      names.push(name)
     }
-    return { docsOnly: true, reason: `${files.length} documentation file(s)`, files: files.map((f) => f.filename) }
+    return { docsOnly: true, reason: `${files.length} documentation file(s)`, files: names }
   }
 
-  const classifyPull = async (allow) => {
+  const classifyPull = async (allow: Allowlist): Promise<Decision> => {
     if (!['opened', 'synchronize', 'reopened', 'ready_for_review'].includes(context.payload.action)) return heavy(`pull_request action ${safeText(context.payload.action)}`)
     const pr = context.payload.pull_request
     const ev = { head: { sha: pr?.head?.sha }, base: { sha: pr?.base?.sha }, changed_files: pr?.changed_files }
-    if (!isInt(pr?.number) || !SHA.test(ev.head.sha) || !SHA.test(ev.base.sha)) return heavy('incomplete pull_request payload')
+    if (!isInt(pr?.number) || !SHA.test(ev.head.sha ?? '') || !SHA.test(ev.base.sha ?? '')) return heavy('incomplete pull_request payload')
     if (!isInt(ev.changed_files) || ev.changed_files < 1 || ev.changed_files > 299) return heavy(`changed file count ${ev.changed_files} out of range 1..299`)
     const { owner, repo } = context.repo
     // Compare immutable event SHAs, never mutable PR file pages.
@@ -59,7 +127,7 @@ module.exports = async ({ github, context, core, env = process.env }) => {
     const cmp = (await github.rest.repos.compareCommitsWithBasehead({ owner, repo,
       basehead: `${ev.base.sha}...${ev.head.sha}`, per_page: 100, page: 1 })).data
     if (!['ahead', 'diverged'].includes(cmp.status) || cmp.base_commit?.sha !== ev.base.sha ||
-        !SHA.test(cmp.merge_base_commit?.sha) || !Array.isArray(cmp.commits) ||
+        !SHA.test(cmp.merge_base_commit?.sha ?? '') || !Array.isArray(cmp.commits) ||
         !isInt(cmp.total_commits) || cmp.total_commits < 1 || cmp.total_commits > 100 ||
         cmp.commits.length !== cmp.total_commits || cmp.commits.at(-1)?.sha !== ev.head.sha ||
         !Array.isArray(cmp.files) || cmp.files.length !== ev.changed_files || cmp.files.length >= 300) {
@@ -68,7 +136,7 @@ module.exports = async ({ github, context, core, env = process.env }) => {
     return classify(allow, cmp.files)
   }
 
-  const classifyPush = async (allow) => {
+  const classifyPush = async (allow: Allowlist): Promise<Decision> => {
     const { before, after, ref } = context.payload
     if (typeof ref !== 'string' || !ref.startsWith('refs/heads/') || context.ref !== ref) return heavy('push is not a branch ref')
     if (context.payload.forced !== false) return heavy('forced or unknown push')
@@ -87,7 +155,7 @@ module.exports = async ({ github, context, core, env = process.env }) => {
     return classify(allow, files)
   }
 
-  let result
+  let result: Decision
   try {
     const force = env.FORCE_HEAVY
     if (force === 'true') result = heavy('force-heavy requested')
@@ -98,7 +166,7 @@ module.exports = async ({ github, context, core, env = process.env }) => {
       result = context.eventName === 'pull_request' ? await classifyPull(allow) : await classifyPush(allow)
     }
   } catch (e) {
-    result = heavy(`classification error: ${safeText(e?.message)}`)
+    result = heavy(`classification error: ${safeText((e as { message?: unknown } | null)?.message)}`)
   }
 
   core.setOutput('docs_only', result.docsOnly ? 'true' : 'false')
@@ -114,6 +182,6 @@ module.exports = async ({ github, context, core, env = process.env }) => {
       .addCodeBlock(html(shown.join('\n') + (omitted > 0 ? `\n... ${omitted} more omitted` : '')))
     await core.summary.write()
   } catch (e) {
-    core.warning(`summary write failed: ${safeText(e?.message)}`)
+    core.warning(`summary write failed: ${safeText((e as { message?: unknown } | null)?.message)}`)
   }
 }
