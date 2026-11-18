@@ -106,3 +106,6 @@ examples/python-cuda/uv.lock
 !/.codex/
 /.codex/*
 !/.codex/config.toml
+
+# Transpiled CI classifier
+/scripts/.generated/

@@ -1,28 +1,11 @@
-// Executes the inline github-script classifier from ci-change-scope.yaml.
-// Run: node --test scripts/tests/test-ci-change-scope.mjs
+// Executes the same classifier module that ci-change-scope.yaml loads.
+// See docs/development/ci-change-scope.md for the build and test commands.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
+import { classifyChangeScope } from '../.generated/ci-change-scope.mjs'
 
-const WORKFLOW = fileURLToPath(new URL('../../.github/workflows/ci-change-scope.yaml', import.meta.url))
-const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor
-
-const yaml = readFileSync(WORKFLOW, 'utf8')
-
-const extractScript = (text) => {
-  const lines = text.split('\n')
-  const starts = lines.flatMap((l, i) => (/^\s+script: \|$/.test(l) ? [i] : []))
-  assert.equal(starts.length, 1, 'exactly one inline script block')
-  const indent = lines[starts[0]].match(/^\s*/)[0].length
-  const body = []
-  for (const l of lines.slice(starts[0] + 1)) {
-    if (l.trim() !== '' && l.match(/^\s*/)[0].length <= indent) break
-    body.push(l.slice(indent + 2))
-  }
-  return body.join('\n')
-}
-const script = extractScript(yaml)
+const yaml = readFileSync(new URL('../../.github/workflows/ci-change-scope.yaml', import.meta.url), 'utf8')
 
 const SHA = (c) => c.repeat(40)
 const BASE = SHA('a')
@@ -117,8 +100,7 @@ const pushGithub = (data, { error } = {}) => ({
 const run = async ({ context, github, env = {}, coreOpts }) => {
   const c = makeCore(coreOpts)
   const penv = { DOC_PATHS: ALLOW_PATHS, DOC_PREFIXES: ALLOW_PREFIXES, FORCE_HEAVY: 'false', ...env }
-  const fn = new AsyncFunction('github', 'context', 'core', 'process', script)
-  await fn(github ?? {}, context, c.core, { env: penv })
+  await classifyChangeScope({ github: github ?? {}, context, core: c.core, env: penv })
   return c
 }
 
@@ -127,12 +109,15 @@ const assertHeavy = (c, pattern) => {
   if (pattern) assert.match(c.outputs.reason, pattern)
 }
 
-test('workflow shape: reusable, least privilege, no checkout/secrets/concurrency', () => {
+test('workflow shape: reusable, least privilege and checkout without persisted credentials', () => {
   assert.match(yaml, /^on:\s*\n\s+workflow_call:/m)
   assert.match(yaml, /permissions:\s*\n\s+contents: read/)
   assert.doesNotMatch(yaml, /pull-requests:/)
-  assert.doesNotMatch(yaml, /actions\/checkout|secrets\.|^\s*concurrency:|continue-on-error/m)
-  assert.doesNotMatch(script, /\$\{\{/, 'no expression interpolation inside script')
+  assert.doesNotMatch(yaml, /secrets\.|^\s*concurrency:|continue-on-error/m)
+  assert.match(yaml, /actions\/checkout@v5[\s\S]*persist-credentials: false/)
+  assert.match(yaml, /path: \.ci-scope-source/)
+  assert.match(yaml, /bun build scripts[/]ci-change-scope\.ts/)
+  assert.match(yaml, /await \(await import\(moduleUrl\.href\)\)\.classifyChangeScope\(/)
   assert.match(yaml, /actions\/github-script@v7/)
 })
 
