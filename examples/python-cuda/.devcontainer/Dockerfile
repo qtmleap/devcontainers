@@ -1,5 +1,8 @@
 FROM nvidia/cuda:12.9.1-cudnn-runtime-ubuntu24.04
 
+# The Codex CLI feature uses this directory as its installer CODEX_HOME.
+RUN mkdir -p /usr/local/share/codex
+
 ARG USERNAME=vscode
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID

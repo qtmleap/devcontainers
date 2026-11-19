@@ -9,6 +9,9 @@
 # tests and signing stay on a Mac.
 FROM swift:6.0-noble
 
+# The Codex CLI feature uses this directory as its installer CODEX_HOME.
+RUN mkdir -p /usr/local/share/codex
+
 ARG USERNAME=vscode
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
